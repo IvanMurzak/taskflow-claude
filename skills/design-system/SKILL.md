@@ -1,10 +1,11 @@
 ---
-name: system
+name: design-system
 description: Design a system/feature architecture end-to-end the way a Technical Director designs features - ground-truth exploration of the affected repos, owner product-decision Q&A, then a numbered design-doc set (with a ROADMAP) in a dedicated per-design sub-folder under .claude/design/ (or a caller-specified path) with a decisions ledger. Use when the user asks to "design a solution/system/architecture", describes a structural problem needing an architectural answer, or wants a feature designed before implementation. NOT for one-off bug fixes or tasks that fit an existing pipeline.
+argument-hint: <what to design> [design root or sub-folder — default .claude/design/<slug>]
 model: fable
 ---
 
-# /design:system — architecture design process
+# design-system — architecture design process
 
 **Model requirement:** this is a critical architectural process and MUST run on the Fable-tier
 model. If the current session model is lower, STOP and ask the user to switch (`/model fable`)
@@ -74,10 +75,10 @@ It contains at least:
   workspace-level global product roadmap (e.g. `.claude/plans/ROADMAP.md`)"*.
 - **Design status** + **implementation status** (e.g. NOT STARTED 0/N) + last-updated date.
 - The **execution timeline** — phases/waves, what runs in parallel, dependency edges, gates.
-- A **status board** (one row per planned unit; filled in properly once `/design:tasks` runs).
+- A **status board** (one row per planned unit; filled in properly once `/design-tasks` runs).
 - **Human-approval gates** (anything touching production, money, secrets, irreversibility).
 - A **progress log** appended over time.
-At design time the status board may be a skeleton; `/design:tasks` populates it from the task
+At design time the status board may be a skeleton; `/design-tasks` populates it from the task
 coefficients.
 
 **The status board is the SINGLE source of truth for implementation state.** Each row carries
@@ -106,6 +107,6 @@ surgical commit per iteration with a message summarizing what changed and why.
 - ROADMAP exists, disambiguated from the global plan store, with timeline + gates.
 - No "TBD" without an owner-facing open question attached.
 
-When the design stabilizes, recommend running `/design:review` (same sub-folder) before task
-decomposition (`/design:tasks`). The full lifecycle is `/design:system` → `/design:review` →
-`/design:tasks` → `/design:implement` (execution orchestrator; owner GO required).
+When the design stabilizes, recommend running `/design-review` (same sub-folder) before task
+decomposition (`/design-tasks`). The full lifecycle is `/design-system` → `/design-review` →
+`/design-tasks` → `/design-implement` (execution orchestrator; owner GO required).

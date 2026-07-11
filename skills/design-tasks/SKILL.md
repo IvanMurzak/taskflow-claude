@@ -1,10 +1,11 @@
 ---
-name: tasks
+name: design-tasks
 description: Decompose a polished, reviewed design-doc folder into an implementable task breakdown - a tasks/ subfolder with one file per task carrying importance and complexity coefficients (used to pick the implementing AI model) and merge-conflict-safe parallelism groups - then populate the design's ROADMAP with the execution waves and status board. Operates on a per-design sub-folder under .claude/design/ (or a caller-specified path). Use when the user asks to "write down the tasks", "decompose the design", or "plan the implementation" of a finished design.
+argument-hint: [<design slug or path> — default: the single design under .claude/design/]
 model: fable
 ---
 
-# /design:tasks — decompose a design into a model-routable, parallel-safe task breakdown
+# design-tasks — decompose a design into a model-routable, parallel-safe task breakdown
 
 **Model requirement:** MUST run on the Fable-tier model (the decomposition IS architecture). If
 the session model is lower, STOP and ask the user to switch (`/model fable`).
@@ -17,7 +18,7 @@ the session model is lower, STOP and ask the user to switch (`/model fable`).
 
 ## Precondition
 
-The design must be LOCKED and reviewed (ideally via `/design:review`) with no open questions.
+The design must be LOCKED and reviewed (ideally via `/design-review`) with no open questions.
 If open questions or unapplied findings remain — STOP and surface them instead of decomposing.
 
 ## Output
@@ -68,7 +69,7 @@ orchestrating agent flips rows + appends the progress log, after ground-truth ve
 keeps a global plan store, it gets ONE thin pointer task for the whole design, never one file
 per task. The ready set is *computed* from `needs` + ✅, not stored. Add/confirm the
 **human-approval gates** for any production/money/secret/irreversible task. If ROADMAP is
-missing (older design), create it here per the `/design:system` §4 shape — every design must
+missing (older design), create it here per the `/design-system` §4 shape — every design must
 end with a populated ROADMAP.
 
 ## The two coefficients (be honest, not flattering)
@@ -115,5 +116,5 @@ same files (they'd conflict anyway).
 
 Update the design README (doc map + status → "tasks designed <date>"), ensure ROADMAP's waves +
 status board are populated, surgical commit (design sub-folder only), and report: task count,
-waves, and the importance/complexity spread. Execution then starts via `/design:implement`
+waves, and the importance/complexity spread. Execution then starts via `/design-implement`
 (same sub-folder) — on explicit owner GO, never automatically.

@@ -4,9 +4,10 @@ Guidance for Claude Code when editing THIS plugin (not for consumers using it).
 
 ## What this is
 
-A four-skill architecture-design lifecycle plugin: `/design:system` → `/design:review` →
-`/design:tasks` → `/design:implement`. Skills live at `skills/<name>/SKILL.md`; the folder name
-is the skill's namespace segment (plugin name `design` + folder `system` = `/design:system`).
+A four-skill architecture-design lifecycle plugin: `/design-system` → `/design-review` →
+`/design-tasks` → `/design-implement`. Skills live at `skills/<name>/SKILL.md`; the folder name
+IS the skill name. Names deliberately carry the `design-` family prefix: UIs often hide the
+plugin namespace, so each name must be self-descriptive standalone (owner decision, 2026-07-11).
 
 ## Invariants — keep these when editing
 
@@ -23,7 +24,9 @@ is the skill's namespace segment (plugin name `design` + folder `system` = `/des
 3. **Task specs are immutable; ROADMAP is the single source of task state.** Never add a
    `status` field to the task frontmatter schema in `tasks`, and never weaken `implement`'s
    single-writer rule.
-4. **Cross-references use plugin-namespaced names** (`/design:review`, not `/design-review`).
+4. **Cross-references use the bare family names** (`/design-review`) — they match what users
+   see. Every skill declares an `argument-hint` exposing the optional design-folder argument;
+   keep it when editing frontmatter.
 5. **Stay consumer-agnostic.** The skills may *prefer* a pipeline system when the consumer
    project has one, but must define the fallback (isolated worker agents in worktrees). Never
    hardcode a specific project's paths beyond the `.claude/design/` default.

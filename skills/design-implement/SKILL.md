@@ -1,10 +1,11 @@
 ---
-name: implement
+name: design-implement
 description: Orchestrate the EXECUTION of a finished design's task list - read the design's ROADMAP status board (the single source of task state), compute the ready set from dependency edges, dispatch each task through the project's pipeline system (model tier per the board), verify ground truth (merged PR, green CI), and flip board rows + progress log as the single writer, wave after wave until the board is resolved. Operates on a per-design sub-folder under .claude/design/ (or a caller-specified path). Use when the user asks to "start the tasks", "implement the design", "drive the roadmap", "запусти выполнение задач", or gives GO on a designed feature.
+argument-hint: [<design slug or path>] [scope: wave/group/task subset — default: whole board]
 model: fable
 ---
 
-# /design:implement — orchestrate a design's task-list execution
+# design-implement — orchestrate a design's task-list execution
 
 **Model requirement:** the ORCHESTRATOR runs on the Fable-tier model (dispatch, gating, and
 verification judgment guard real money and production). If the session model is lower, STOP and
@@ -20,7 +21,7 @@ this session.
 ## Preconditions (STOP if unmet)
 
 1. Design status LOCKED + reviewed + **tasks designed** — `tasks/` populated and
-   `ROADMAP.md` has a filled status board. If not → point the user at `/design:tasks`.
+   `ROADMAP.md` has a filled status board. If not → point the user at `/design-tasks`.
 2. **Reconcile the board with ground truth FIRST.** The board is a cache: check `gh pr list`
    / merged SHAs / CI for every non-⬜ row and fix drift (a prior session may have died
    mid-flight). Never dispatch on top of an unreconciled board.
@@ -79,7 +80,7 @@ this session.
 When every scoped row is ✅: update the design README status line + ROADMAP implementation
 counter, append the closing progress-log entry, delete the plan-store pointer task (if one was
 created), surgical commit, and report: tasks landed (with PRs), gates cleared, coefficients vs
-actual difficulty (feed surprises back via `/design:review` if the design drifted from reality).
+actual difficulty (feed surprises back via `/design-review` if the design drifted from reality).
 
 ## Anti-patterns
 

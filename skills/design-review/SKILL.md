@@ -1,10 +1,11 @@
 ---
-name: review
+name: design-review
 description: Adversarially review and refactor an existing design-doc folder with three parallel independent reviewers - code ground-truth verification, external spec/standards conformance, and internal consistency/completeness - then apply ALL confirmed findings in one coherent batch and commit. Operates on a per-design sub-folder under .claude/design/ (or a caller-specified path). Use when the user asks to "re-check / re-verify / review / refactor the design", or before decomposing a design into tasks.
+argument-hint: [<design slug or path> — default: the single design under .claude/design/]
 model: fable
 ---
 
-# /design:review — adversarial design verification & refactor
+# design-review — adversarial design verification & refactor
 
 **Model requirement:** MUST run on the Fable-tier model (critical architectural review). If the
 session model is lower, STOP and ask the user to switch (`/model fable`).
