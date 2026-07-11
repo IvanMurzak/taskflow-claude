@@ -1,0 +1,19 @@
+{
+  "name": "design",
+  "version": "0.1.0",
+  "description": "A four-skill lifecycle for feature/system architecture design. /design:system explores ground truth in the affected repos and writes a numbered design-doc set (decisions ledger, security, migration, UX budgets) plus a ROADMAP into a per-design sub-folder under the consumer project's .claude/design/. /design:review adversarially verifies the design with three parallel independent reviewers (code ground truth, external specs/RFCs, internal consistency) and applies all confirmed findings in one batch. /design:tasks decomposes the reviewed design into immutable, merge-conflict-safe task specs with importance/complexity coefficients that route each task to an AI model tier, and populates the ROADMAP's execution waves + status board. /design:implement orchestrates execution off that status board — the single source of task state — computing the ready set from dependency edges, dispatching tasks on the board's model tier, verifying ground truth (merged PR, green CI), and flipping statuses as the single writer, wave after wave.",
+  "author": {
+    "name": "IvanMurzak"
+  },
+  "repository": "https://github.com/IvanMurzak/Claude-Design",
+  "license": "MIT",
+  "keywords": [
+    "design",
+    "architecture",
+    "roadmap",
+    "task-decomposition",
+    "orchestration",
+    "adversarial-review",
+    "model-routing"
+  ]
+}
