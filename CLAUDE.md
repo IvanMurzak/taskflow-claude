@@ -1,4 +1,4 @@
-# CLAUDE.md — Claude-Design plugin
+# CLAUDE.md — Claude-Strategy plugin
 
 Guidance for Claude Code when editing THIS plugin (not for consumers using it).
 

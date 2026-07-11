@@ -1,4 +1,4 @@
-# Claude-Design
+# Claude-Strategy
 
 A Claude Code plugin: a **four-skill lifecycle for feature/system architecture** — from a fuzzy
 problem statement to designed docs, adversarial verification, a model-routable task breakdown,
@@ -25,7 +25,7 @@ From the private marketplace:
 
 ```bash
 /plugin marketplace add --source local --path "C:\Projects\AI\claude-plugins"
-/plugin install design@ivan-private-plugins
+/plugin install strategy@ivan-private-plugins
 ```
 
 ## The skills
