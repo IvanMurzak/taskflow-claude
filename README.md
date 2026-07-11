@@ -14,9 +14,10 @@ plugin namespace (you see `/design-review`, not a bare `/review`). Every skill t
                     verification)                          execution)
 ```
 
-All four skills run on the **Fable-tier model** (declared in frontmatter) — architecture is the
-one place where reasoning quality dominates token cost. The tasks they *produce* are routed to
-cheaper tiers by the coefficients.
+The three design-time skills run on the **Fable-tier model** (declared in frontmatter) —
+architecture is the one place where reasoning quality dominates token cost. `/design-implement`
+inherits the session model (orchestration is procedural); the tasks themselves are routed to
+model tiers by the coefficients.
 
 ## Install
 

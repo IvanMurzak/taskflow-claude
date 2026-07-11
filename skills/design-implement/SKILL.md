@@ -2,15 +2,13 @@
 name: design-implement
 description: Orchestrate the EXECUTION of a finished design's task list - read the design's ROADMAP status board (the single source of task state), compute the ready set from dependency edges, dispatch each task through the project's pipeline system (model tier per the board), verify ground truth (merged PR, green CI), and flip board rows + progress log as the single writer, wave after wave until the board is resolved. Operates on a per-design sub-folder under .claude/design/ (or a caller-specified path). Use when the user asks to "start the tasks", "implement the design", "drive the roadmap", "запусти выполнение задач", or gives GO on a designed feature.
 argument-hint: [<design slug or path>] [scope: wave/group/task subset — default: whole board]
-model: fable
 ---
 
 # design-implement — orchestrate a design's task-list execution
 
-**Model requirement:** the ORCHESTRATOR runs on the Fable-tier model (dispatch, gating, and
-verification judgment guard real money and production). If the session model is lower, STOP and
-ask the user to switch (`/model fable`). The IMPLEMENTERS' models come from the board, not from
-this session.
+**Model:** inherits the session model — orchestration is procedural (reconcile, dispatch,
+verify, flip); it does not need a top reasoning tier. The IMPLEMENTERS' models come from the
+board's `model` column, not from this session.
 
 ## Which design folder
 

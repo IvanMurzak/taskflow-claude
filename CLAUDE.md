@@ -18,9 +18,12 @@ plugin namespace, so each name must be self-descriptive standalone (owner decisi
    rules (board = only mutable state; single writer = orchestrator; global plan store gets one
    pointer task), and the model rubric (≥8 top / 5–7 mid / ≤4 fast / security bumps a tier).
    Grep all four SKILL.md files when touching any of these.
-2. **`model: fable` frontmatter is mandatory on all four skills** — plus the in-body STOP
-   instruction if the session model is lower. This was an explicit owner decision: architecture
-   quality outranks token cost.
+2. **`model: fable` frontmatter is mandatory on the three design-time skills**
+   (`design-system`, `design-review`, `design-tasks`) — plus the in-body STOP instruction if
+   the session model is lower. Explicit owner decision: architecture quality outranks token
+   cost. **`design-implement` deliberately has NO model frontmatter** (owner decision,
+   2026-07-11): orchestration inherits the session model; the implementers' tiers come from
+   the ROADMAP board.
 3. **Task specs are immutable; ROADMAP is the single source of task state.** Never add a
    `status` field to the task frontmatter schema in `tasks`, and never weaken `implement`'s
    single-writer rule.
