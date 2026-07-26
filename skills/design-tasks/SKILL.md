@@ -2,7 +2,6 @@
 name: design-tasks
 description: Decompose a polished, reviewed design-doc folder into an implementable task breakdown - a tasks/ subfolder with one file per task carrying importance and complexity coefficients (used to pick the implementing AI model) and merge-conflict-safe parallelism groups - then populate the design's ROADMAP with the execution waves and status board. Operates on a per-design sub-folder under .claude/design/ (or a caller-specified path). Use when the user asks to "write down the tasks", "decompose the design", or "plan the implementation" of a finished design.
 argument-hint: [<design slug or path> — default: the single design under .claude/design/]
-model: fable
 ---
 
 # design-tasks — decompose a design into a model-routable, parallel-safe task breakdown

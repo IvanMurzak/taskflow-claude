@@ -2,7 +2,6 @@
 name: design-system
 description: Design a system/feature architecture end-to-end the way a Technical Director designs features - ground-truth exploration of the affected repos, owner product-decision Q&A, then a numbered design-doc set (with a ROADMAP) in a dedicated per-design sub-folder under .claude/design/ (or a caller-specified path) with a decisions ledger. Use when the user asks to "design a solution/system/architecture", describes a structural problem needing an architectural answer, or wants a feature designed before implementation. NOT for one-off bug fixes or tasks that fit an existing pipeline.
 argument-hint: <what to design> [design root or sub-folder — default .claude/design/<slug>]
-model: fable
 ---
 
 # design-system — architecture design process
