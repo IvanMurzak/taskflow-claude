@@ -2,7 +2,6 @@
 name: "taskflow-frame"
 description: "Frame a system or feature change from verified repository evidence and owner decisions, then write a self-contained Taskflow architecture set and ROADMAP. Use before a structural feature or architectural change, not for a one-off bug fix."
 argument-hint: "<what to frame> [taskflow slug — writes .claude/taskflow/<slug>]"
-disable-model-invocation: true
 ---
 
 # taskflow-frame — establish the architecture frame

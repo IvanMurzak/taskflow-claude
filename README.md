@@ -1,6 +1,6 @@
 # Taskflow for Claude Code
 
-Taskflow is a manually invoked four-stage lifecycle for turning a fuzzy change
+Taskflow is a four-stage lifecycle that a user or agent can invoke to turn a fuzzy change
 into repository-evidenced architecture, adversarial verification, immutable task
 specifications, and ROADMAP-driven execution.
 
@@ -12,7 +12,7 @@ specifications, and ROADMAP-driven execution.
 
 This repository is the Claude Code package. Its plugin manifest is
 `.claude-plugin/plugin.json`, and its four public skills live under `skills/`.
-Owners invoke each stage explicitly; no skill pins a model.
+Any user or agent may invoke each stage; no skill pins a model.
 
 ## Workflow contract
 
