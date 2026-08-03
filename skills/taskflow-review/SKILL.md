@@ -1,80 +1,64 @@
 ---
-name: design-review
-description: Adversarially review and refactor an existing design-doc folder with three parallel independent reviewers - code ground-truth verification, external spec/standards conformance, and internal consistency/completeness - then apply ALL confirmed findings in one coherent batch and commit. Operates on a per-design sub-folder under .claude/design/ (or a caller-specified path). Use when the user asks to "re-check / re-verify / review / refactor the design", or before decomposing a design into tasks.
-argument-hint: [<design slug or path> — default: the single design under .claude/design/]
+name: "taskflow-review"
+description: "Adversarially verify an existing Taskflow folder against repository code, authoritative external specifications, and internal consistency; then apply confirmed non-product corrections in one coherent batch."
+argument-hint: "[<taskflow slug> — default: the single taskflow under .claude/taskflow/]"
+disable-model-invocation: true
 ---
 
-# design-review — adversarial design verification & refactor
+# taskflow-review — adversarial verification
 
-**Model requirement:** MUST run on the Fable-tier model (critical architectural review). If the
-session model is lower, STOP and ask the user to switch (`/model fable`).
+## Select the taskflow
 
-## Which design folder
-
-- **Default root:** `.claude/design/`. Review the per-design **sub-folder**
-  `<root>/<slug>/` (designs are modular — one sub-folder each).
-- **Caller override:** honor an explicitly named path/slug. If the root holds exactly one design
-  sub-folder, use it; if several, ask which slug (or take the one the user names). Confirm the
-  resolved path before spawning reviewers.
-- Read the whole sub-folder (README, ROADMAP, all numbered docs, and `tasks/` if present) before
-  reviewing.
+- Default root: `.claude/taskflow/`; review one `<slug>/` sub-folder.
+- Honor a supplied slug. If the root has exactly one sub-folder, use it;
+  otherwise ask the owner to select one. Confirm the resolved folder before work.
+- Read the whole folder—README, ROADMAP, numbered documents, and `tasks/` if it
+  exists. Never use legacy workflow artifacts as input or fallback.
 
 ## Principle
 
-A design review is only worth doing adversarially: reviewers try to BREAK the design, not
-summarize it. Findings must be verified against ground truth (code, spec text) before being
-applied — plausible-but-wrong findings are worse than none.
+Reviewers try to disprove the taskflow. Apply a finding only after verifying it
+against evidence; plausible but false corrections are harmful.
 
 ## Process
 
-### 1. Fan out THREE reviewers in parallel (one Agent call each, same message)
+1. Run three independent reviews in parallel.
 
-**Reviewer A — ground truth vs code.** Verify every FACTUAL claim about existing code against
-the actual sources (file:line). Includes feasibility claims ("X already does Y"). Must also
-verify cross-language/byte-level claims (hashing, encodings, endianness) where the design
-depends on parity. Report format: numbered findings with severity, doc+section, what the doc
-says, what the code says (file:line), one-line fix — AND a "verified correct" list.
+   - **Repository truth:** check every factual claim against source with
+     `file:line` evidence, including feasibility and cross-language/byte-level
+     parity claims. Report findings and a separate verified-correct inventory.
+   - **External conformance:** use available current research to check
+     authoritative specifications, standards, vendor behavior, and relevant
+     SDK source. Classify MUST/SHOULD deviations with citations.
+   - **Internal consistency:** check cross-document decisions, owner-requirement
+     traceability, migration and ROADMAP alignment, real dependency edges,
+     threat coverage, UX budgets, stale text, and the rule that ROADMAP is the
+     sole task-state record.
 
-**Reviewer B — external spec/standards conformance.** Fetch the CURRENT authoritative specs
-(WebFetch/WebSearch: protocol specs, RFCs, vendor client behavior — including real SDK source
-where it defines de-facto behavior). Classify violations by MUST/SHOULD with citations. Pay
-special attention to: discovery/metadata locations, identifier canonicalization, security BCPs,
-and what real clients actually do vs what the spec says.
+   Use P0 for broken guarantees/material falsehoods, P1 for gaps or risks, and
+   P2 for wording or stale content.
+2. Wait for every review, consolidate duplicate findings, and verify the
+   proposed correction. Apply factual and mechanical corrections together.
+3. If evidence affects a product decision—deployment, compatibility, identity,
+   UX, monetization, scope, production behavior, money, secrets, or an
+   irreversible action—do not choose for the owner. Present evidence and a safe
+   recommended option, then record the confirmed choice as `REVISED` with date
+   and rationale in the decision ledger.
+4. Edit all affected documents in one coherent batch. Sweep the taskflow folder
+   for every replaced term, parameter, number, and storage location. Update the
+   README status and ROADMAP progress log.
+5. Make a surgical taskflow-folder commit. Report decision revisions first,
+   then confirmed corrections, then the verified-correct inventory.
 
-**Reviewer C — internal consistency + completeness.** Cross-doc contradictions (a decision
-stated differently in two places; leftovers from earlier revisions), requirement traceability
-(every owner requirement → mechanism, fully guaranteed, edge cases stress-tested), phase/plan
-completeness (every decision has a home in some phase; dependency graph edges real;
-**ROADMAP timeline/gates match the migration doc and task specs**; **ROADMAP's status board is
-the ONLY place task state exists** — a `status` field in task frontmatter or a status copy in
-any other doc is a finding), threat-model coverage of NEWLY added mechanisms, UX budget honesty
-(recount the steps from the mechanics), and a stale-text sweep. Must verify each candidate
-against the actual doc text before reporting.
+## Review checks
 
-Severity scale for all three: **P0** = breaks a guarantee/golden path or states a falsehood that
-materially affects the design; **P1** = gap/risk/unhandled path; **P2** = wording/staleness.
+- `ROADMAP.md` has the only task status board and only the executing
+  orchestrator edits it after repository/CI evidence.
+- Task specs have no `status`; when present they include `sequence`,
+  `security_critical`, and `production_touching`.
+- Timeline, gates, dependencies, migration, and task specs agree.
+- The workflow uses available forge/CI tooling where present and a local,
+  isolated-worktree evidence path where it is absent.
 
-### 2. Consolidate — after ALL THREE report
-Merge findings; dedupe overlaps (spec + consistency often hit the same text). Decide fixes for
-every finding — including design changes (not just wording). A finding that revises an owner
-decision gets the decision marked **REVISED + date + why** in the ledger, and is flagged to the
-user prominently in the final report.
-
-### 3. Apply in ONE batch
-Edit all docs in a single pass (batched Edits per file). Then run a **stale-term grep sweep**
-over the sub-folder for every construct you replaced (old parameter shapes, old numbers, old
-storage locations) — fix stragglers. Update the README status line AND the ROADMAP progress log
-to record the review.
-
-### 4. Commit + report
-Surgical commit (design sub-folder only) with a message summarizing spec/ground-truth/
-consistency findings separately. Report to the user: (a) design changes they must be aware of
-(decision revisions first), (b) factual corrections, (c) what was verified sound — so the review
-builds justified confidence, not just a diff.
-
-## Anti-patterns
-
-- Applying fixes before all reviewers return (they overlap on the same text).
-- Reporting reviewer output verbatim instead of verified, consolidated findings.
-- Treating MUST-violations as "hardening later".
-- Skipping the "verified correct" inventory — knowing what checked out is half the value.
+Do not start decomposition automatically; the next manual stage is
+`/taskflow-tasks`.
