@@ -8,7 +8,7 @@ argument-hint: "[<taskflow slug>] [scope: wave, group, or task subset — defaul
 
 ## Select and validate the taskflow
 
-- Default root: `.claude/taskflow/`; operate in one `<slug>/` folder. Honor a
+- Default root: `.taskflow/`; operate in one `YYYY-MM-DD-<slug>/` folder. Honor a
   supplied slug; resolve ambiguity with the owner. Never use legacy
   workflow artifacts as input or fallback.
 - Stop unless the frame is locked and reviewed, `tasks/` is populated, and

@@ -1,16 +1,18 @@
 ---
 name: "taskflow-frame"
 description: "Frame a system or feature change from verified repository evidence and owner decisions, then write a self-contained Taskflow architecture set and ROADMAP. Use before a structural feature or architectural change, not for a one-off bug fix."
-argument-hint: "<what to frame> [taskflow slug — writes .claude/taskflow/<slug>]"
+argument-hint: "<what to frame> [taskflow slug — writes .taskflow/YYYY-MM-DD-<slug>]"
 ---
 
 # taskflow-frame — establish the architecture frame
 
 ## Artifact location
 
-- Create and use exactly one `.claude/taskflow/<kebab-slug>/` folder for this
-  taskflow. A caller may provide the slug but cannot redirect artifacts outside
-  `.claude/taskflow/`. If the folder exists, read it before extending it; never
+- Create and use exactly one `.taskflow/YYYY-MM-DD-<kebab-slug>/` folder for
+  this taskflow. Prefix the caller-provided kebab-case slug with the local
+  calendar date on which the folder is created; do not rename existing folders.
+  A caller may provide the slug but cannot redirect artifacts outside
+  `.taskflow/`. If the folder exists, read it before extending it; never
   clobber it.
 - Do not read, migrate, or fall back to legacy workflow artifacts. They are
   archival and outside this workflow.
@@ -29,7 +31,8 @@ argument-hint: "<what to frame> [taskflow slug — writes .claude/taskflow/<slug
 
 ## Process
 
-1. Resolve `<slug>` and state the path. Extract the problem; ask 2–4 focused
+1. Resolve the kebab-case `<slug>`, prefix it with today's local date as
+   `YYYY-MM-DD-<slug>`, and state the path. Extract the problem; ask 2–4 focused
    owner questions while beginning exploration.
 2. Explore each affected repository or subsystem independently. Require exact
    files, line numbers, existing behavior, change seams, risks, and a concise
