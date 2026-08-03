@@ -2,7 +2,6 @@
 name: "taskflow-review"
 description: "Adversarially verify an existing Taskflow folder against repository code, authoritative external specifications, and internal consistency; then apply confirmed non-product corrections in one coherent batch."
 argument-hint: "[<taskflow slug> — default: the single taskflow under .claude/taskflow/]"
-disable-model-invocation: true
 ---
 
 # taskflow-review — adversarial verification
@@ -60,5 +59,5 @@ against evidence; plausible but false corrections are harmful.
 - The workflow uses available forge/CI tooling where present and a local,
   isolated-worktree evidence path where it is absent.
 
-Do not start decomposition automatically; the next manual stage is
-`/taskflow-tasks`.
+The next stage is `/taskflow-tasks`; a user or agent may invoke it when the
+review is complete.

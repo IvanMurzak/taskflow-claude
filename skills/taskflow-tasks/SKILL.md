@@ -2,7 +2,6 @@
 name: "taskflow-tasks"
 description: "Decompose a reviewed Taskflow folder into immutable implementation-ready task specifications, conflict-safe execution groups, dependencies, routing tiers, and ROADMAP waves."
 argument-hint: "[<taskflow slug> — default: the single taskflow under .claude/taskflow/]"
-disable-model-invocation: true
 ---
 
 # taskflow-tasks — immutable specifications and execution waves
@@ -96,4 +95,5 @@ surgical commit limited to the taskflow folder.
 4. Draw the resulting waves in ROADMAP. One task should be one reviewable,
    PR-able unit; split oversized work and merge trivial same-file work.
 
-Execution begins only after an explicit owner GO via `/taskflow-execute`.
+Any user or agent may invoke `/taskflow-execute`; dispatch still begins only
+after the explicit owner GO required by its approval gates.

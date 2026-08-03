@@ -2,7 +2,6 @@
 name: "taskflow-execute"
 description: "Orchestrate execution of a completed Taskflow from its ROADMAP status board: compute ready tasks, dispatch within dependency and conflict limits, verify repository and CI evidence, and update the board as its sole writer."
 argument-hint: "[<taskflow slug>] [scope: wave, group, or task subset — default: whole board]"
-disable-model-invocation: true
 ---
 
 # taskflow-execute — ROADMAP-driven orchestration
