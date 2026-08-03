@@ -1,0 +1,35 @@
+{
+  "name": "taskflow",
+  "version": "0.5.0",
+  "description": "A four-skill Taskflow lifecycle for architecture framing, adversarial verification, immutable task specifications, and ROADMAP-driven execution.",
+  "author": {
+    "name": "IvanMurzak"
+  },
+  "repository": "https://github.com/IvanMurzak/Claude-Strategy",
+  "license": "MIT",
+  "keywords": [
+    "taskflow",
+    "architecture",
+    "roadmap",
+    "task-decomposition",
+    "orchestration",
+    "adversarial-review",
+    "model-routing"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Taskflow",
+    "shortDescription": "Frame, verify, specify, and orchestrate complex changes.",
+    "longDescription": "A repository-evidenced workflow that frames architecture, adversarially reviews it, writes immutable task specs, and executes from one ROADMAP status board.",
+    "developerName": "IvanMurzak",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://github.com/IvanMurzak/Claude-Strategy",
+    "defaultPrompt": [
+      "Use taskflow-frame to frame this architectural change.",
+      "Review the selected Taskflow artifacts for evidence and consistency.",
+      "Prepare immutable tasks and execution waves for this Taskflow."
+    ],
+    "brandColor": "#2F6FEB"
+  }
+}
