@@ -1,0 +1,19 @@
+skills/taskflow-execute/references/submodules.md
+  s_b258288a83a16e::t_c35ab6fce8a260 1-342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "17a2771987a4967ae4e978290276281ccab0d827",
+  "prompts": {},
+  "sessions": {
+    "s_b258288a83a16e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_b258288a83a16e",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
