@@ -259,8 +259,9 @@ requested = N  from --parallel=N        (8 when --parallel=auto)
 optional.** A formula written without it dispatches the graph's width instead of
 the width that was asked for: `--parallel=2` against five ready group heads
 would start five workers. At the default `--parallel=1` the formula yields at
-most one slot — one task at a time, which is the behaviour the skill has always
-had.
+most one slot — one task at a time. That is strictly more conservative than
+0.5.1's own behaviour: its prose promised "parallel only across independent
+groups," and run for real it dispatched more than one ready task per round.
 
 The graph is the real limiter. A group is one conflict domain, so at most one
 task per group is ever dispatchable, and separate repositories are separate
