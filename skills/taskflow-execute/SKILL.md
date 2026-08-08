@@ -116,11 +116,16 @@ Three ways the block yields nothing, all expected:
 1. **No shell.** The block runs under bash and `shell:` is deliberately left
    unset, so a Windows host without Git Bash — or any non-Claude host — produces
    no injection at all. The block is simply absent or left unexpanded.
-2. **Disabled by policy.** `disableSkillShellExecution` degrades every injection
-   to a marker string rather than output. Text where output was expected — a
-   notice that shell execution is disabled, a permission error, or the eight
-   command lines echoed back verbatim — **is** the marker. Check for it before
-   trusting the block.
+2. **Disabled by policy.** `disableSkillShellExecution` replaces every injection
+   with a marker string rather than output. On Claude Code the marker reads:
+
+   ```
+   [shell command execution disabled by policy]
+   ```
+
+   **Check for it before trusting the block.** Treat any other text standing
+   where output was expected — a permission error, or the eight command lines
+   echoed back verbatim — the same way.
 3. **Permission.** The block is permission-checked as a **single multi-part
    command**: one part the grant does not cover fails the whole block, not just
    that line. The frontmatter grant above exists for exactly this, and it is
