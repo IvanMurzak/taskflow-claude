@@ -166,9 +166,12 @@ Run it **from the project root** — the command uses the current directory as
 | Field | Meaning |
 |---|---|
 | `status` | `created` · `reused` · `failed` — see §5 |
-| `worktree_path` | absolute path to the provisioned directory |
-| `branch` | the branch the hook cut, `worktree-<name>` by contract |
+| `worktree_path` | absolute path to the provisioned **parent** directory. For a submodule task this is *not* where the work goes — see the next row |
+| `branch` | the branch that was cut, `worktree-<name>` by contract |
 | `env_file` | absolute path to the dotenv file — the input to §6 |
+| **`submodule_slots`** | **one entry per declared submodule — `{path, name, dir, base, source, exists}` — and `dir` is the directory a submodule task's worker actually works in.** `[]` when none were declared: never `null`, never absent |
+| `ports` / `port_base` / `ports_source` | the allocated block, its base, and which side allocated it (`builtin` or `hook`) |
+| `provisioner` | `builtin` or `hook` — which side cut this slot |
 | `reused` / `reused_evidence` | `true` plus `registry` or `git-worktree` when the slot already existed |
 | `base_branch`, `submodules`, `hook_dir` | echoed back as resolved |
 | `detail` | the failure reason when `status` is `failed` |
@@ -176,6 +179,30 @@ Run it **from the project root** — the command uses the current directory as
 Exit **0** success · **1** the provisioning hook failed (soft-fail or hard-fail;
 `detail` says which) · **2** usage, an invalid `--name`, or an invalid
 `--outcome`.
+
+**`submodule_slots` is in this table because a resume depends on it.**
+`pipeline worktree list --json` reports the same field per slot, derived at list
+time for slots the current process did not create — which is the only channel a
+resumed run has (§12). Each entry's `source` says which channel named `dir`, so a
+derived guess is never dressed up as a reported fact:
+
+| `source` | where `dir` came from |
+|---|---|
+| `record` | the built-in provisioner reported it as it cut it, and the slot record kept it |
+| `env-file` | the slot's env file publishes it — a **hook's** own answer, on the channel the frozen contract leaves for it |
+| `derived` | neither channel named it, so this is the layout convention both provisioners follow (`<parent slot dir>--<submodule basename>`) — check `exists` |
+
+A `derived` entry carries `base: ""` rather than a guessed branch; the key is
+always present either way.
+
+**The env file names the same directories, and named them first.** Beside
+`WORKTREE_PATH` and the ports, it carries `SUBMODULE_COUNT` and, per submodule,
+`SUBMODULE_<n>_PATH` · `SUBMODULE_<n>_NAME` · **`SUBMODULE_<n>_DIR`** ·
+`SUBMODULE_<n>_BASE`, plus `SUBMODULE_DIR_<NAME>` / `SUBMODULE_BASE_<NAME>`
+aliases. `SUBMODULE_<n>_DIR` is the submodule worktree — the value §7 item 5
+inlines into a submodule task's brief. Two channels now name it; before `a11` the
+env file was the only one, and nothing on the resume path read it. §12 is where
+that cost is paid.
 
 **Which of the three gaps a slot is closing decides where the worker actually
 works**, and the brief must be explicit about it:
@@ -194,20 +221,22 @@ works**, and the brief must be explicit about it:
 
 **Two properties of the shipped command worth knowing before relying on it.**
 
-1. **`create` runs the consumer's `worktree-create.*` hook**, resolved from
-   `<project>/.pipeline/.hooks` (override with `--hook-dir <path>`). `--base` and
-   `--submodules` reach that hook as `PIPELINE_WT_BASE_BRANCH` and
-   `PIPELINE_WT_SUBMODULES` — the hook is what cuts the branch. **A project with
-   no such hook gets a failed create (exit 1), not a provisioned slot.** A
-   built-in default provisioner is planned but is not in the version this
-   document was verified against; until it ships, `toolkit` in a hookless project
-   behaves as `native` with an announced create failure per attempt, so withhold
-   rather than retry.
-2. **`--ports <n>` is recorded, not allocated,** in that same version — the
-   `--json` `ports` field is always `null` and `ports_requested` echoes the
-   request. Ports therefore come from the consumer hook today. §6 states the
-   precedence that governs both worlds, so nothing changes in this document when
-   the allocator lands.
+1. **`create` runs the consumer's `worktree-create.*` hook where one exists**,
+   resolved from `<project>/.pipeline/.hooks` (override with `--hook-dir <path>`).
+   `--base` and `--submodules` reach that hook as `PIPELINE_WT_BASE_BRANCH` and
+   `PIPELINE_WT_SUBMODULES`, and the hook is then what cuts the branch. **A
+   project with no such hook is not a failed create:** the CLI's built-in
+   provisioner cuts the slot itself — the worktree outside the repository, one
+   worktree per `--submodules` entry from *that submodule's* own integration
+   branch, a free port block, and the env file — and reports
+   `provisioner: "builtin"`. `toolkit` is reachable in a hookless project, so a
+   task is not withheld for lack of a hook.
+2. **`--ports <n>` is allocated, not merely recorded.** `--json` returns the block
+   in `ports` and `port_base` and names the allocator in `ports_source`. The
+   allocation is resolved **per field**, so a hook that returns no ports still
+   receives the provisioner's: a hook-provisioned slot reports
+   `provisioner: "hook"` alongside `ports_source: "builtin"`. §6.1 owns that
+   precedence and explains why it is per-field.
 
 ### 3.3 `pipeline` — the run provisions itself
 
@@ -221,6 +250,50 @@ pipeline drive --root <pipeline_root> --run-id <id> --start <step-name> \
 The run creates its own slot, and **F4 through F6 are skipped entirely** — no
 worker brief from §7, no orchestrator-side merge from §9. Mint the run id with
 `pipeline id`; never invent one. `--merge` does not apply (§1.3).
+
+### 3.4 A slot is made by the substrate or it is not made at all
+
+**Never reproduce `pipeline worktree create` with raw git.** Not
+`git worktree add -b worktree-<task-id> <base>` in the superproject, not
+`git -C <submodule> worktree add …`, not "just this once, because `create` is
+failing and the round is waiting".
+
+When a slot cannot be provisioned — the CLI is below the minimum version, the
+tier degraded mid-run, `create` exits non-zero, the hook refuses — the correct
+response is the one §2.1 already defines for the `native` gaps: **withhold the
+task and say why.** A withheld row stays `⬜ pending`, costs one stated line in
+the run report, and delays nothing else. It is exactly how `native` withholds a
+task that needs a port, and a `toolkit` slot that could not be cut is the same
+situation, not a worse one.
+
+**What a hand-rolled worktree costs, concretely.** This is why the rule is a
+correctness rule and not a preference:
+
+- **no slot record** — nothing under `.pipeline/.runtime/worktrees/` knows it
+  exists;
+- **no env file** — §6's inlining has nothing to read, and §7 item 4 cannot be
+  satisfied;
+- **no port allocation** — a task that needed a port still does not have one,
+  which was the whole reason to be in `toolkit` rather than `native`;
+- **invisible to `pipeline worktree list`**, which answers *"no provisioned
+  worktree slots"* while the directories are live on disk;
+- **invisible to the registry side of `pipeline gc`** — and a worktree hand-rolled
+  inside a *submodule* is invisible to the superproject's `git worktree list`
+  too, so §12.1's audit does not see it either;
+- and therefore **the run-completion `gc` report is false**: it says the ground is
+  clear because it cannot see what is standing on it.
+
+That last consequence is the one that matters. The orchestrator's own closing
+evidence becomes untrue, and nothing downstream can tell that it is.
+
+**Observed, not hypothetical.** In this design's own proving run, a resumed round
+believed the CLI path was broken and hand-rolled two worktrees with
+`git -C <submodule> worktree add … -b … origin/main`. Branch and base were
+correct, so nothing looked wrong from the outside; there were simply no slots.
+`pipeline worktree list` reported none while both were live, no env file existed
+for either, no ports were allocated, and the run's `gc` reported clean ground. A
+CLI defect is a reason to withhold and report — never a licence to route around
+the substrate, because the substrate is also the bookkeeping.
 
 ---
 
@@ -456,6 +529,32 @@ branch — never as a `<src>:<dst>` refspec fetch from a worktree. When you only
 need to *know* where a branch is, fetch and read `origin/<base>` without moving
 the local ref.
 
+### 8.5 The host's isolation root is the *primary* checkout, not the orchestrator's cwd
+
+An orchestrator can itself be running inside a **linked** worktree. The host does
+not follow it there: worker worktrees are still created under the **primary**
+checkout's `.claude/worktrees/`. Observed directly in this design's proving run —
+the orchestrator's cwd was a linked worktree under `C:/tmp/…`, and its three
+worker slots were created under the primary checkout's `.claude/worktrees/`.
+
+Two consequences follow, and neither is cosmetic.
+
+1. **D6 survives this only because `.claude/worktrees/` is gitignored.** Worker
+   directories land *inside* the main checkout's path; §8.3's postflight diff does
+   not report them only because git never sees them. In this workspace the ignore
+   is a **tracked** `.gitignore` entry, so it travels with the repository. A
+   consumer repository that lacks one gets worker worktrees appearing as untracked
+   paths in the main tree, which §10 reads as a leaked isolation boundary and
+   **halts the whole run** for. Before the first `--parallel > 1` run in an
+   unfamiliar repository, confirm the entry exists.
+2. **F-9's own remedy is unavailable to a run scoped to a worktree.** §10's
+   host-refusal row says to `git worktree prune` and retry once — but the stale,
+   locked registration is in the *primary* checkout, and a worktree-scoped run may
+   not write there (§8, enforced in code on Claude Code). Such a run cannot clear
+   its own leftovers. Report the refusal, name the primary checkout's
+   `.claude/worktrees/` path so the leftover can be found, and withhold the
+   affected dispatch; the prune is an owner action, run from the primary checkout.
+
 ---
 
 ## 9. Merge (F6)
@@ -586,8 +685,8 @@ Every response is defined, announced, and non-forcing. Exactly one halts the run
 | Failure | Response |
 |---|---|
 | **Dirty main checkout at preflight** | Stop before any dispatch. Report the dirty paths. No stash, no clean |
-| **Slot creation fails** | The row stays pending. Reap the partial slot with `pipeline worktree destroy --name <task-id> --outcome completed` — `completed` reaps, and `halted` would *preserve*, which is wrong for a slot with nothing in it. **Do not retry blindly** |
-| **Host refuses to create the isolation worktree** — `native` tier, before any `pipeline worktree` slot exists at all: *"Refusing to use … as an isolation worktree: … git metadata could not be resolved … Isolation is refused rather than assumed"* | **Fails closed, correctly** — no silent fall-back to the main checkout, so this is a retry situation, not a corruption one. But the refused attempt leaves the worktree **locked**, and that locked leftover is what makes the very next attempt fail the same way. **Do not retry blindly** — retrying straight against the same lock only compounds the leftovers, not clears them. `git worktree prune` (main checkout) to clear the stale, locked registration, then retry the dispatch once |
+| **Slot creation fails** | The row stays pending. Reap the partial slot with `pipeline worktree destroy --name <task-id> --outcome completed` — `completed` reaps, and `halted` would *preserve*, which is wrong for a slot with nothing in it. **Do not retry blindly, and do not hand-roll the slot with raw git** (§3.4): withhold the task and say why |
+| **Host refuses to create the isolation worktree** — `native` tier, before any `pipeline worktree` slot exists at all: *"Refusing to use … as an isolation worktree: … git metadata could not be resolved … Isolation is refused rather than assumed"*. **The trigger is the protected checkout being itself a linked worktree** — its `.git` is a *file* pointing at the primary checkout's git dir, not a directory, so the host cannot verify its git identity. It is **not** a property of the host OS, and not specific to Windows | **Fails closed, correctly** — no silent fall-back to the main checkout, so this is a retry situation, not a corruption one. But the refused attempt leaves the worktree **locked**, and that locked leftover is what makes the very next attempt fail the same way. **Do not retry blindly** — retrying straight against the same lock only compounds the leftovers, not clears them. `git worktree prune` to clear the stale, locked registration, then retry the dispatch once. **The prune runs in the *primary* checkout, whose `.claude/worktrees/` holds the leftover — so a run that is itself scoped to a worktree cannot perform it and must withhold instead (§8.5)** |
 | **`create` reports `reused`** | Duplicate dispatch (§5). Do not proceed with the worker. Reconcile via §11 |
 | **`gh` absent or unauthenticated** | There is no PR path. Workers push branches only, rows stop at `🟣`, and the run says so **once** — not per task |
 | **Base-branch fast-forward fails** | Do not force. Report and continue the round; the next round retries |
@@ -627,7 +726,7 @@ Four cases:
 |---|---|
 | **1. A `🔵` row whose PR is merged** | Verify every DoD item against the repository, then record `✅` with the merged reference. The work is done; only the bookkeeping was interrupted |
 | **2. A `🔵` row with an open PR** | **Adopt it.** Do not dispatch a second worker for that task — that is the duplicate dispatch §5 exists to prevent. Pick the row up at review or merge, wherever it actually is |
-| **3. A `🔵` row with a branch but no PR** | Inspect the worktree. Either resume the worker against the existing branch, or reset the row to pending and reap the slot. Decide from the tree, not from the row |
+| **3. A `🔵` row with a branch but no PR** | **Run §12's reaping precondition before you form an opinion** — every repository the slot spans, branch commits *and* working-tree status, in that order. Where it finds work: resume the worker against the existing branch. Only where **every** repository the slot spans is both commitless and clean may the row reset to pending and the slot be reaped. Decide from the tree, not from the row — and the branch and the submodule slot are both part of the tree |
 | **4. A live slot with no matching row** | A leak. `pipeline gc` reports it; `pipeline gc --clean` reaps it. A `⛔` row keeps its slot deliberately — that is not a leak, and reaping it destroys the post-mortem |
 
 Reconciliation is the reason the in-flight table (§5) is rebuilt from repository
@@ -637,6 +736,67 @@ alone. The board records what was *dispatched*; the tree records what *happened*
 ---
 
 ## 12. Cleanup
+
+**The reaping precondition — nothing below reaps on emptiness. Read this first.**
+
+Every destructive step in this section reaps a directory *and a branch*: §12.2's
+`destroy --outcome completed`, §12.4's `pipeline gc --clean`, and any "reset the
+row and reap the slot" decision reached through §11. Each of them is preceded by
+the same three checks, **in this order** — **the branch is checked, in every
+repository the slot spans, before any directory is reaped.**
+
+**1. A submodule task's work is not in the parent slot, and never was.** A task
+whose `repo:` frontmatter names a submodule works in the **submodule** slot, on
+that submodule's own integration branch (§8.2). The parent superproject slot is
+empty, clean, and has uninitialized submodules **by design** — that is what a
+correctly provisioned slot for such a task looks like. `worktree_path` is the
+parent; **`submodule_slots[].dir` is where the work is** (§3.2). An empty parent
+slot is the *expected* state and **proves nothing whatever** about whether the
+task produced anything.
+
+**2. Ask git before you judge a directory — in every repository the slot spans.**
+Enumerate them first from `pipeline worktree list --json`: the parent
+`worktree_path`, plus every `submodule_slots[].dir`. Then, in each:
+
+```
+git -C <dir> branch --list worktree-<task-id>            # does the branch exist
+git -C <dir> log --oneline <base>..worktree-<task-id>    # does it carry commits
+git -C <dir> status --porcelain                          # is there uncommitted work
+```
+
+**All three, in every one of them.** `<base>` is that repository's own
+integration branch, not the superproject's — a submodule slot is cut from the
+submodule's branch, and asking the superproject's question of it returns a
+confidently wrong answer. Any non-empty output, from any of the three, in any of
+those repositories, means the slot holds work.
+
+**3. Only then judge what a directory contains** — and judge it at
+`submodule_slots[].dir`, never at `worktree_path` alone.
+
+**Why the third command is not optional.** A slot that needs reconciliation at
+all is usually one whose worker was *killed*, and a killed worker's output is by
+definition uncommitted. "The branch carries zero commits" is the expected answer
+in that case and is **not** a finding of emptiness. Commits survive a removed
+worktree; uncommitted work does not, and `--outcome completed` and `--clean`
+delete the branch as well as the directory. There is nothing to recover from
+afterwards.
+
+**This ordering is the rule that was missing, and its absence is the most
+expensive defect this design has recorded.** A resumed run in this design's own
+proving run inspected two **parent** slots, ran its branch check in the
+**superproject** only, and concluded — verbatim — *"Both abandoned branches carry
+zero commits and both worktrees are clean — the killed workers produced
+nothing,"* and *"Both slots are empty shells … the target code was never even
+present in them."* Every clause was true of the directory it looked at and false
+about the work. The work was uncommitted, in the two **submodule** slots, on
+same-named branches in different repositories. All four worktrees were reaped;
+**21,880 bytes of finished implementation were destroyed**, and the run reported
+that it had never existed.
+
+`a11` fixed the CLI half — `submodule_slots` is populated on the hook path now,
+so `list --json` names those directories. But a tool can only answer the question
+it is asked, and the question asked was about the wrong directory in the wrong
+repository. This precondition is the question being asked correctly.
 
 ### 12.1 The wave-boundary audit — every round, not only on interruption
 
@@ -656,9 +816,15 @@ came back to look. Only a deliberate round-boundary comparison of slots against
 branches against rows surfaces either one before it compounds. A run that only
 reconciles on interruption finds this after nine merges instead of after one.
 
+**`git worktree list` in the superproject does not show a submodule slot.** Take
+those from `pipeline worktree list --json`'s `submodule_slots[].dir` (§3.2), or
+the audit reconciles only the half of each submodule task that never held the
+work.
+
 The audit itself changes nothing — it is a read, not a `--clean`. Flag what it
 finds in the round report; §12.2's per-task cleanup and §12.4's run-completion
-`pipeline gc` are what act on it.
+`pipeline gc` are what act on it — and each of those first runs the reaping
+precondition above.
 
 ### 12.2 Per task, on success
 
@@ -731,7 +897,9 @@ the deliverable; a `gc` whose output nobody reads has collected nothing.
   branch §12.2 could not touch, and the only point that retries a slot directory
   an earlier `destroy` failed to remove. Run it — do not treat it as merely
   optional housekeeping — but never while a `⛔` row's slot is still wanted for
-  inspection.
+  inspection, and never before the reaping precondition at the head of this
+  section has been satisfied for every row whose slot it would touch. `--clean`
+  deletes branches, and this is the last point at which that is reversible.
 - **A safe `-d` delete does not reap a squash-merged branch.** Git never sees the
   original commits as ancestors of a squash commit, so it reads as unmerged
   forever. If task PRs in a given repository squash-merge, plain `--clean`
@@ -767,11 +935,12 @@ either.
 | `pipeline gc` | `--project` `--clean` `--json` `--no-submodules` `--force-worktree-branches` |
 | `pipeline drive` | `--root` `--run-id` `--start` `--effort <step_id>=<level>` `--json` |
 | `pipeline submodule bump` | `--no-admin`, on every invocation (§9.4). The remaining flags are owned by `references/submodules.md` §6 |
-| `git worktree list`, `git worktree prune`, `git branch --list worktree-*`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git -C <checkout> pull --ff-only` | git |
+| `git worktree list`, `git worktree prune`, `git branch --list worktree-*`, `git log --oneline <base>..<branch>`, `git status --porcelain`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git -C <checkout> pull --ff-only` | git |
 | `gh api repos/…/branches/…/protection`, `gh api repos/…/rulesets`, `gh pr merge` | GitHub CLI |
 
 **Named only to forbid them:** `--force` on slot creation (the CLI exposes none
-on any `worktree` verb), `git worktree add --force`, and `gh pr merge --admin` or
-any other bypass flag. The orchestrator runs none of these, and no brief asks a
-worker to. Likewise, no branch namespace other than `worktree-*` appears in this
-system at all.
+on any `worktree` verb), `git worktree add` in **any** form as a substitute for
+`pipeline worktree create` (§3.4) — `--force` least of all — and
+`gh pr merge --admin` or any other bypass flag. The orchestrator runs none of
+these, and no brief asks a worker to. Likewise, no branch namespace other than
+`worktree-*` appears in this system at all.
