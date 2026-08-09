@@ -166,15 +166,24 @@ later turn — so the result is read by nobody, least of all by you. That is the
 same mechanism `SKILL.md` §10.2 measured one level up: backgrounding work whose
 result the current turn needs returns an id and no outcome.
 
-So: **never background work whose result you need**, and never end your turn
-waiting on something. If a build or a test suite is slow, run it in the
-foreground and wait for it; if it exceeds your tool's timeout, raise the timeout,
-narrow the command, or **report the timeout as your outcome**. This rule exists
-because a real worker did the other thing — its entire final report was *"Pausing
-here — I'll resume automatically once the background `bun run test` run finishes,
-and then commit, push, and open the PR."* It never resumed. It had written 215
-lines, committed none of them, pushed nothing and opened no PR, and the run it
-belonged to reported success.
+So: **never end your turn waiting on something.** The temptation is the
+background handle — `run_in_background`, a detached process, a poll you mean to
+come back to — because it returns an id immediately and reads like progress. A
+result you do not collect **within this same turn** is a result nobody collects.
+Prefer the foreground; if a build or a test suite exceeds your tool's timeout,
+raise the timeout, narrow the command, or **report the timeout as your outcome**.
+
+**The host will offer you this trap directly, so recognise it.** When a
+foreground command hits its timeout, the Bash tool moves it to the background and
+says *"You will be notified when it completes."* **That promise is not yours to
+collect** — the notification is addressed to a later turn you will not have.
+Treat a timeout as a result, not as a handle to wait on.
+
+This rule exists because a real worker did the other thing — its entire final
+report was *"Pausing here — I'll resume automatically once the background
+`bun run test` run finishes, and then commit, push, and open the PR."* It never
+resumed. It had written 215 lines, committed none of them, pushed nothing and
+opened no PR, and the run it belonged to reported success.
 
 **If the task cannot be finished, finish the report.** Say what was done, what
 remains, and **where the work is** — the branch, the last commit, and the

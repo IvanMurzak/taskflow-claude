@@ -108,9 +108,10 @@ partial verdict.
 **"I'll resume automatically" is a false belief about the host, not a matter of
 style.** Nothing wakes a finished subagent turn; a backgrounded command's result
 arrives as a notification in a later turn of the session that dispatched you, and
-in an unattended run there is no later turn. So never background a diff fetch, a
-test run or anything else whose result this review needs, and never end your turn
-waiting on one.
+in an unattended run there is no later turn. So never end your turn waiting on a
+diff fetch, a test run or anything else — a result you do not collect within this
+turn is one nobody collects, and a timed-out command that the host moves to the
+background with *"you will be notified"* is a result, not a handle to wait on.
 
 **If you cannot complete the review, post the review you have.** Say which files
 or lenses you covered, which you did not, and why you stopped — then report the
