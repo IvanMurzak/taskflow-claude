@@ -439,8 +439,18 @@ failure`.
 
 - **A row moves only on verified evidence** — a merged SHA, passing checks, DoD
   items checked against the tree — **never on a worker's report.**
-- **One commit per round, not one per row.** At `--parallel=1` a round is a
-  single row, so this is the surgical per-row commit the skill has always made.
+- **Per-round commits, not per-row commits.** A round commits the board at two
+  points, and two only: once at dispatch (§10 step 3), flipping every row
+  dispatched that round to `🔵` in a single commit, and once at outcome (§10
+  step 7), recording every row's verified result in a single commit. At
+  `--parallel=1` a round is one row, so each of those two commits is the
+  surgical single-row commit the skill has always made; at `--parallel>1` it is
+  still exactly those two commits for the whole round — never one per row
+  dispatched, and never one per row verified. The dispatch commit exists
+  because §12's resume reconciles live slots and branches against the board's
+  own `🔵` rows to tell an adopted PR from a leaked slot; a dispatch that was
+  never committed leaves nothing on the board for that check to find, and §13
+  forbids leaving it uncommitted anyway.
 - Record the run/PR reference and the date on the row, and a progress-log line
   where one is warranted.
 - If a workspace planning store exists, keep exactly one thin pointer to this
