@@ -547,13 +547,47 @@ Two consequences follow, and neither is cosmetic.
    paths in the main tree, which §10 reads as a leaked isolation boundary and
    **halts the whole run** for. Before the first `--parallel > 1` run in an
    unfamiliar repository, confirm the entry exists.
-2. **F-9's own remedy is unavailable to a run scoped to a worktree.** §10's
-   host-refusal row says to `git worktree prune` and retry once — but the stale,
-   locked registration is in the *primary* checkout, and a worktree-scoped run may
-   not write there (§8, enforced in code on Claude Code). Such a run cannot clear
-   its own leftovers. Report the refusal, name the primary checkout's
-   `.claude/worktrees/` path so the leftover can be found, and withhold the
-   affected dispatch; the prune is an owner action, run from the primary checkout.
+2. **F-9's own remedy is unavailable to a run scoped to a worktree — and that is
+   the arrangement this design prescribes.** §10's host-refusal row says to clear
+   the leftover registration and retry once, but the leftover is in the *primary*
+   checkout, and a worktree-scoped run may not write there (§8, enforced in code
+   on Claude Code). Such a run cannot clear its own leftovers. **This is not an
+   edge case.** D6 and D13 put the orchestrator in a linked worktree with the
+   primary checkout read-only, so the sanctioned remedy is unreachable by
+   default — unavailable exactly when it is needed. It blocked an entire proving
+   run: two spawns refused, nothing dispatched, both rows withheld. Report the
+   refusal, name the primary checkout's `.claude/worktrees/` path so the leftover
+   can be found, and withhold the affected dispatch; clearing it is an owner
+   action, run from the primary checkout.
+
+**The standalone-clone workaround, and what it costs.** The remedy *is* reachable
+from a **standalone clone**, because a clone is its own primary checkout and the
+orchestrator may write its `.claude/worktrees/`. That is the only reason the
+second proving run dispatched at all after the first was blocked. It is a real
+workaround and it is not free — take it knowingly, and record in the run report
+that the run is executing from a clone and which one:
+
+- **It does not prevent the refusal.** The clone's very first isolation attempt
+  was refused too, on a clean slate. What the clone restores is the *reachability*
+  of the remedy, nothing about the isolation itself.
+- **It is no longer the D13 arrangement.** §8's three legal writes — the board,
+  the base fast-forward, the pointer bumps — now land in a tree the shared
+  checkout cannot see until they are pushed and pulled, and two trees hold the
+  same taskflow. Exactly one of them may be the board's writer.
+- **The submodule pointers are the clone's.** They are uninitialized until
+  `git submodule update --init`, and then they are whatever the cloned commit
+  pins — never the shared checkout's *local* pointer state, so anything bumped,
+  staged or checked out there but not pushed is simply absent.
+- **Local state a clone lacks is genuinely gone**: gitignored configuration such
+  as `.env` (which is what `.worktreeinclude` exists to carry into a worker — in
+  a fresh clone there is nothing to carry), `.git/info/exclude` entries,
+  local-only branches, installed dependencies and build outputs, and the
+  `.pipeline/.runtime/` slot records of earlier rounds. §11's reconciliation
+  therefore correctly finds nothing to adopt, and a run resumed in a clone starts
+  against an empty slot registry.
+- **The leftovers stay where they were.** Relocating abandons the locked
+  registrations the refusals already left in the shared checkout. They remain an
+  owner action there, and nothing in the clone will ever reap them.
 
 ---
 
@@ -686,13 +720,14 @@ Every response is defined, announced, and non-forcing. Exactly one halts the run
 |---|---|
 | **Dirty main checkout at preflight** | Stop before any dispatch. Report the dirty paths. No stash, no clean |
 | **Slot creation fails** | The row stays pending. Reap the partial slot with `pipeline worktree destroy --name <task-id> --outcome completed` — `completed` reaps, and `halted` would *preserve*, which is wrong for a slot with nothing in it. **Do not retry blindly, and do not hand-roll the slot with raw git** (§3.4): withhold the task and say why |
-| **Host refuses to create the isolation worktree** — `native` tier, before any `pipeline worktree` slot exists at all: *"Refusing to use … as an isolation worktree: … git metadata could not be resolved … Isolation is refused rather than assumed"*. **The trigger is the protected checkout being itself a linked worktree** — its `.git` is a *file* pointing at the primary checkout's git dir, not a directory, so the host cannot verify its git identity. It is **not** a property of the host OS, and not specific to Windows | **Fails closed, correctly** — no silent fall-back to the main checkout, so this is a retry situation, not a corruption one. But the refused attempt leaves the worktree **locked**, and that locked leftover is what makes the very next attempt fail the same way. **Do not retry blindly** — retrying straight against the same lock only compounds the leftovers, not clears them. `git worktree prune` to clear the stale, locked registration, then retry the dispatch once. **The prune runs in the *primary* checkout, whose `.claude/worktrees/` holds the leftover — so a run that is itself scoped to a worktree cannot perform it and must withhold instead (§8.5)** |
+| **Host refuses to create the isolation worktree** — `native` tier, before any `pipeline worktree` slot exists at all: *"Refusing to use … as an isolation worktree: … git metadata could not be resolved … Isolation is refused rather than assumed"*. **The trigger is the protected checkout being itself a linked worktree** — its `.git` is a *file* pointing at the primary checkout's git dir, not a directory, so the host cannot verify its git identity. It is **not** a property of the host OS, and not specific to Windows | **Fails closed, correctly** — no silent fall-back to the main checkout, so this is a retry situation, not a corruption one. But the refused attempt leaves the worktree **locked**, and that locked leftover is what makes the very next attempt fail the same way. **Do not retry blindly, and do not force** — retrying straight against the same lock only compounds the leftovers rather than clearing them. **First decide whether the lock is stale or live (§10.1): they present identically and their responses are opposite.** *Stale* — no holder is still running: clear the leftover, then retry the dispatch once. The clearing runs in the *primary* checkout, whose `.claude/worktrees/` holds it, **so a run that is itself scoped to a worktree cannot perform it and must withhold instead (§8.5)**. *Live* — the holder is still running: there is nothing to clear, `prune` is a **no-op**, every retry re-fails identically, and forcing the removal **destroys a running worker**. Wait for the holder to exit or withhold the dispatch, and never force |
 | **`create` reports `reused`** | Duplicate dispatch (§5). Do not proceed with the worker. Reconcile via §11 |
 | **`gh` absent or unauthenticated** | There is no PR path. Workers push branches only, rows stop at `🟣`, and the run says so **once** — not per task |
 | **Base-branch fast-forward fails** | Do not force. Report and continue the round; the next round retries |
 | **Pointer bump or parent push rejected** | Report. Leave pointers unbumped. No force-push, no elevation flag added by the orchestrator |
 | **Port allocation exhausted** | Withhold the task exactly as in the `native` tier (§2.1), and state the range that was tried |
 | **Reviewer subagent fails** | Treat as a blocking finding for that round. A second failure escalates the row to `⛔` rather than merging unreviewed |
+| **Reviewer subagent cannot be *dispatched* at all** — host isolation refuses it, typically against a live lock held by the task's own still-running implementer (§10.1) | **Do not substitute another agent type for it.** `general-purpose` in particular carries **neither** property gate SG5 exists to assert: no `isolation: worktree`, so the review is not placed in its own worktree and §8.1's enforced boundary covers neither it nor anything it spawns; and none of `taskflow-reviewer`'s own definition — its read-only tool set, and the never-review-a-diff-you-produced rule (`references/code-review.md`). Once posted to the PR its output is indistinguishable from a contract review, and it is not one. Hold the row unreviewed and report why: **a failed review round is the better outcome than a review that silently dropped both guarantees.** Observed — the second proving run made exactly this substitution and posted the result to a PR |
 | **Worker fails or times out** | `⛔` with the reason. **The worktree is preserved** and its path recorded. `--on-fail=continue` keeps the other slots running; `--on-fail=stop` drains the in-flight slots and halts |
 | **Review still blocking after K rounds** | `⛔`. Worktree preserved. (K and the loop are `references/code-review.md`'s) |
 | **CI red** | The row stays `🟣` with the failing check named. No merge |
@@ -705,6 +740,68 @@ Every response is defined, announced, and non-forcing. Exactly one halts the run
 continues — because a run that stops on the first imperfection finishes nothing,
 and a run that continues past a leaked isolation boundary corrupts a shared
 checkout.
+
+### 10.1 A stale lock and a live lock look identical — separate them before acting
+
+Both appear as `locked` in `git worktree list`, and **that annotation is not the
+discriminator**: git suppresses the `prunable` marker on a locked entry even when
+its directory is already gone, so the listing alone cannot tell them apart. Ask
+two questions, in this order. `git worktree list --porcelain` sets them up — it
+gives each entry's path, a `locked <reason>` line wherever a lock is held, and a
+`prunable <reason>` line wherever git considers the registration dead.
+
+Everything below concerns the **host's** leftovers under `.claude/worktrees/` in
+the primary checkout. A CLI-provisioned slot is never reaped with raw git — that
+is `pipeline worktree destroy` and `pipeline gc`, §12, and §3.4 is unaffected.
+
+**1. Does the registered directory still exist on disk?**
+
+- **Gone ⇒ a stale registration.** `git worktree prune` **on its own will not
+  clear it** — prune skips a locked registration entirely and does not even
+  report it as prunable. `git worktree unlock <path>`, then
+  `git worktree prune`. Retry the dispatch once afterwards.
+- **Present ⇒ question 2**, because who owns that directory decides everything.
+
+**2. Is the lock's holder still running?** The reason string is the host's own
+text and names its holder — observed as `claude agent agent-<id> (pid <n>)`. Ask
+the operating system whether that pid is alive: `Get-Process -Id <n>` on Windows,
+`ps -p <n>` elsewhere.
+
+- **Alive ⇒ a LIVE lock, and there is nothing to remedy.** Prune is a **no-op**,
+  every retry re-fails identically and mints one more locked leftover, and the
+  only thing that would remove the directory destroys a running worker. Wait for
+  the holder to exit, or withhold the dispatch and say why. This is the case that
+  blocked a reviewer dispatch in the second proving run — against the
+  *implementer's own* worktree, still running its test suite.
+- **Not running ⇒ an abandoned leftover**, the ordinary product of a refused
+  spawn: the directory and its registration both outlived an agent that never
+  started. Ask git about it before judging it, exactly as §12's reaping
+  precondition requires — `git log --oneline <base>..<branch>` and
+  `git status --porcelain` in that directory. Such a worktree is empty by
+  construction, but that is a claim to check, not one to assume. Then
+  `git worktree unlock <path>`, `git worktree remove <path>`,
+  `git worktree prune`, and retry the dispatch once.
+
+**`git worktree prune --dry-run --verbose` is the cheap check, and its exit status
+is not the answer.** It names exactly what a real prune would remove and exits
+**0** whether it found something or nothing, so read the output, not the code. An
+empty result says only that prune would do nothing — true of a live worktree, and
+equally true of a locked registration whose directory is already gone. That is
+why question 1 comes first.
+
+**Every escalation past a plain `remove` is the thing to refuse.**
+`git worktree remove` refuses a **locked** worktree — exit **128**, quoting the
+lock reason back at you — and refuses an **unlocked** one holding modified or
+untracked files: exit **128**, *"contains modified or untracked files, use
+--force to delete it"*. Both refusals are answers, not obstacles (§5): a leftover
+that will not remove cleanly is one that still has a holder or still holds work.
+Only `git worktree remove -f -f` overrides a lock, and it deletes the directory
+with everything uncommitted in it — which, by §12's own argument, is exactly what
+a live worker's output is. **`-f -f` is not on this runbook's command list and is
+never run**; *"prune didn't clear it, so force it"* is §12's catastrophe reached
+from the other side. A removal that fails instead on a Windows file lock is the
+F-12 case §12.2 already covers: record the path and let run-completion `gc`
+re-scan it.
 
 ---
 
@@ -935,12 +1032,15 @@ either.
 | `pipeline gc` | `--project` `--clean` `--json` `--no-submodules` `--force-worktree-branches` |
 | `pipeline drive` | `--root` `--run-id` `--start` `--effort <step_id>=<level>` `--json` |
 | `pipeline submodule bump` | `--no-admin`, on every invocation (§9.4). The remaining flags are owned by `references/submodules.md` §6 |
-| `git worktree list`, `git worktree prune`, `git branch --list worktree-*`, `git log --oneline <base>..<branch>`, `git status --porcelain`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git -C <checkout> pull --ff-only` | git |
+| `git worktree list`, `git worktree list --porcelain`, `git worktree prune`, `git worktree prune --dry-run --verbose`, `git worktree unlock <path>`, `git worktree remove <path>` — **host leftovers only** (§10.1), never a `pipeline`-provisioned slot, `git branch --list worktree-*`, `git log --oneline <base>..<branch>`, `git status --porcelain`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git submodule update --init`, `git -C <checkout> pull --ff-only` | git |
 | `gh api repos/…/branches/…/protection`, `gh api repos/…/rulesets`, `gh pr merge` | GitHub CLI |
+| `Get-Process -Id <n>` (Windows) · `ps -p <n>` (elsewhere) | the operating system — the live-lock check, §10.1, and nothing else |
 
 **Named only to forbid them:** `--force` on slot creation (the CLI exposes none
 on any `worktree` verb), `git worktree add` in **any** form as a substitute for
-`pipeline worktree create` (§3.4) — `--force` least of all — and
+`pipeline worktree create` (§3.4) — `--force` least of all —
+`git worktree remove -f -f` against a locked worktree, which is the one command
+that overrides a live lock and destroys the worker behind it (§10.1), and
 `gh pr merge --admin` or any other bypass flag. The orchestrator runs none of
 these, and no brief asks a worker to. Likewise, no branch namespace other than
 `worktree-*` appears in this system at all.
