@@ -47,9 +47,11 @@ Reading the output:
 
 > verify the round's tasks → commit the board → **sync** → recompute the ready set
 
-One sync per dispatch round. **One commit per round.** Three tasks that merged
-into the same submodule in one round produce one fast-forward and one pointer
-bump between them, not three.
+One sync per dispatch round, producing **one pointer-bump commit per round** —
+a count separate from, and not to be confused with, the board's own two
+per-round commits at dispatch and outcome (SKILL.md §9). Three tasks that
+merged into the same submodule in one round produce one fast-forward and one
+pointer bump between them, not three.
 
 **Only submodules that actually received a merge this round are touched.** Build
 the round's touched set from merge evidence, not from `.gitmodules`: for each row
