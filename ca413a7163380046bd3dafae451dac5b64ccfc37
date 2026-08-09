@@ -1,0 +1,19 @@
+skills/taskflow-execute/references/parallel-execution.md
+  s_befe771145aad8::t_9baf17c505777c 1-712
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ca413a7163380046bd3dafae451dac5b64ccfc37",
+  "prompts": {},
+  "sessions": {
+    "s_befe771145aad8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_befe771145aad8",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
