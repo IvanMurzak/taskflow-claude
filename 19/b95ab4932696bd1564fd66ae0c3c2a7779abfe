@@ -1,0 +1,19 @@
+skills/taskflow-execute/references/parallel-execution.md
+  s_f390812401efd4::t_0e8dae3aa77e24 169-170,172-174,183-206,224-239,254-297,532-557,688-689,729,740-800,819-823,826-827,900-902,938,942-946
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "19b95ab4932696bd1564fd66ae0c3c2a7779abfe",
+  "prompts": {},
+  "sessions": {
+    "s_f390812401efd4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_f390812401efd4",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
