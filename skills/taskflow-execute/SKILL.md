@@ -356,18 +356,19 @@ typed.
 ### 8.1 The minimum version constant
 
 ```
-minimum pipeline version = unset — no published release ships `pipeline worktree` yet
+minimum pipeline version = 0.16.0 — the first published release shipping `pipeline worktree`
 ```
 
-While the constant is unset, `--engine=auto` resolves to **`native`** on every
-install and the run states the reason once. When the release lands, set the
-constant to that published version and compare **numerically** — never by
-testing whether the binary exists, and never by probing the subcommand. A CLI
-that is present but older resolves to `native` with the reason stated: presence
-alone would resolve to `toolkit` and then fail on first use, which is a silent
-misdetection instead of an announced degradation. An explicit `--engine=toolkit`
-is taken at the owner's word, and a failure that follows is reported as the
-tier's, not re-resolved.
+`--engine=auto` reads `pipeline --version` and compares it against that constant
+**numerically** — never by testing whether the binary exists, and never by
+probing the subcommand. **At or above it ⇒ `toolkit`. Below it, or `pipeline`
+absent, or the reported version unparseable ⇒ `native`, and the run states the
+reason once**, naming the version found and the minimum required. A CLI that is
+present but older resolves to `native` for the same reason: presence alone would
+resolve to `toolkit` and then fail on first use, which is a silent misdetection
+instead of an announced degradation. An explicit `--engine=toolkit` is taken at
+the owner's word, and a failure that follows is reported as the tier's, not
+re-resolved.
 
 ### 8.2 Withheld is not failed
 
