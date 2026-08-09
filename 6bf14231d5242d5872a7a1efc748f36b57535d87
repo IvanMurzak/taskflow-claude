@@ -1,0 +1,16 @@
+skills/taskflow-execute/SKILL.md
+  h_8325a340bf5897 442-453
+skills/taskflow-execute/references/submodules.md
+  h_8325a340bf5897 50-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6bf14231d5242d5872a7a1efc748f36b57535d87",
+  "prompts": {},
+  "humans": {
+    "h_8325a340bf5897": {
+      "author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
