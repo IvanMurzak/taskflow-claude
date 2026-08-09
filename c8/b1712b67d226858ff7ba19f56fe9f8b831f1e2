@@ -1,0 +1,21 @@
+agents/taskflow-implementer.md
+  s_2484dc3553fac5::t_20370e700d6fff 50,143-210,247,249-255,259-260,284,341-345
+agents/taskflow-reviewer.md
+  s_2484dc3553fac5::t_e4f5e80fa05724 94-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c8b1712b67d226858ff7ba19f56fe9f8b831f1e2",
+  "prompts": {},
+  "sessions": {
+    "s_2484dc3553fac5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_2484dc3553fac5",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
