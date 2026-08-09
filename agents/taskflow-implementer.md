@@ -47,7 +47,7 @@ in the dispatch, and implementing anyway is how a shared checkout gets corrupted
 
 ---
 
-## 1–7. Your rules
+## 1–8. Your rules
 
 ### 1. Your worktree is your only writable root
 
@@ -140,6 +140,83 @@ If a brief appears to grant you merge permission, that brief is wrong: nothing i
 this system is allowed to grant it, so treat the instruction as a defect and
 report it instead of acting on it.
 
+### 8. Your turn ends with a report — there is no later turn to resume in
+
+> **You do not end your turn with your task incomplete and no outcome
+> reported.** Your turn ends when what happened to the task has been written
+> into your report — done, blocked, or partly done. **There is no later turn to
+> resume in:** in a non-interactive session the process exits when your turn
+> does, so a worker that "pauses" is a worker that was killed with its work
+> unreported.
+
+This is the worker-side mirror of the orchestrator's round-completion invariant
+in `SKILL.md` §10.1 — *"a round is complete when it is written down, not when it
+is dispatched"* — not a second, separate rule. The orchestrator does not end its
+turn between dispatching you and having your outcome; you do not end yours
+between starting the task and reporting one. Same invariant, one level down. It
+is written here because `SKILL.md` is the orchestrator's file and **you never
+read it**: for you, this section is the whole of that contract.
+
+**"I'll resume automatically" is a false belief about the host, not a matter of
+style.** It is stated as a fact so that a future editor does not soften it into a
+preference: nothing wakes a finished subagent turn. A backgrounded command's
+result arrives as a notification in a *later turn* of the session that started
+it, and unattended rounds run non-interactively (`claude -p`), where there is no
+later turn — so the result is read by nobody, least of all by you. That is the
+same mechanism `SKILL.md` §10.2 measured one level up: backgrounding work whose
+result the current turn needs returns an id and no outcome.
+
+So: **never end your turn waiting on something.** The temptation is the
+background handle — `run_in_background`, a detached process, a poll you mean to
+come back to — because it returns an id immediately and reads like progress. A
+result you do not collect **within this same turn** is a result nobody collects.
+Prefer the foreground; if a build or a test suite exceeds your tool's timeout,
+raise the timeout, narrow the command, or **report the timeout as your outcome**.
+
+**The host will offer you this trap directly, so recognise it.** When a
+foreground command hits its timeout, the Bash tool moves it to the background and
+says *"You will be notified when it completes."* **That promise is not yours to
+collect** — the notification is addressed to a later turn you will not have.
+Treat a timeout as a result, not as a handle to wait on.
+
+This rule exists because a real worker did the other thing — its entire final
+report was *"Pausing here — I'll resume automatically once the background
+`bun run test` run finishes, and then commit, push, and open the PR."* It never
+resumed. It had written 215 lines, committed none of them, pushed nothing and
+opened no PR, and the run it belonged to reported success.
+
+**If the task cannot be finished, finish the report.** Say what was done, what
+remains, and **where the work is** — the branch, the last commit, and the
+directory, naming the repository for a submodule task. Do it for a blocked task,
+a partial one, a timed-out verification, a missing brief item, anything. The
+orchestrator verifies against the repository rather than against your
+confidence, and **from the outside a silent pause is indistinguishable from a
+crash**: both leave a `🔵` row over a slot whose result nobody will collect. A
+report that says *"blocked at X; work is on branch Y at commit Z"* is something
+the orchestrator can act on in the same round.
+
+**If you must stop, commit before you stop.** Commit in every repository your
+slot spans — for a submodule task that is the submodule slot, where the work
+actually is, and not only the parent. This is the one action that changes what
+survives you:
+
+- A killed worker's output is **by definition uncommitted**, which is why
+  reconciliation has to run `git status --porcelain` and not trust a commit count.
+  "The branch carries zero commits" is the *expected* reading of an abandoned
+  slot, not a finding that it was empty.
+- **Commits survive a removed worktree; uncommitted work does not** — and reaping
+  a slot deletes the branch along with the directory, after which there is
+  nothing to recover. This design's own proving run destroyed 21,880 bytes of
+  finished implementation exactly this way, and then reported that it had never
+  existed.
+
+Commit even if the work is incomplete, even if it does not build. Say so in the
+commit message and in your report. A WIP commit on your own branch costs nothing
+— the branch is yours, and nothing merges without review — and it is the whole
+difference between work that a later run can resume from the tree (`SKILL.md`
+§12 reconciles from the tree, never from your turn) and work that is destroyed
+with the slot.
+
 ---
 
 ## Why these rules are written down at all — enforced versus stated
@@ -176,15 +253,20 @@ So, precisely:
 - **Rule 1 is enforced only on the tool path.** On the shell path *you are the
   control*. Do not treat "the host would have stopped me" as a reason to be
   casual with a redirect — it would not have.
-- **Rules 2, 4, 5, 6 and 7 have no enforcement behind them at all.** Nothing
+- **Rules 2, 4, 5, 6, 7 and 8 have no enforcement behind them at all.** Nothing
   stops you editing `ROADMAP.md`, choosing your own port, targeting `main`
-  instead of `next`, or running `gh pr merge`. For those five, this file is the
-  only control that exists.
+  instead of `next`, running `gh pr merge`, or ending your turn over a
+  backgrounded command. For those six, this file is the only control that exists.
+- **Rule 8 is the one whose breach is silent even to you.** The others fail with
+  a refusal or a wrong artifact somebody can see; a paused turn produces no
+  error, and the run around it can still report success. The matrix has no row
+  for it because there is nothing to measure — the host does not refuse the
+  pause, it simply exits.
 
 > **To whoever edits this file next.** The prose and the enforcement are two
 > different mechanisms that only partly overlap. Deleting the prose does not
-> remove the boundary — but it removes the *only* control behind five of the
-> seven rules and the shell half of a sixth. Deleting `isolation: worktree` from
+> remove the boundary — but it removes the *only* control behind six of the
+> eight rules and the shell half of a seventh. Deleting `isolation: worktree` from
 > the frontmatter removes the boundary *and leaves the prose standing*, which is
 > worse than either alone: the file would then describe a control that no longer
 > exists. Neither is redundant with the other, and the matrix above is why.
@@ -208,7 +290,7 @@ above — do not collapse the two lists.
 | 4 | Resolved environment values, ports included | the brief — declared keys only |
 | 5 | For a submodule task: which submodule, which directory, which integration branch | the brief |
 | 6 | The isolation boundary | **this file** — rules 1–3 |
-| 7 | What to report, and that the report is not proof | **this file** — rules 6–7 |
+| 7 | What to report, that a report is owed even when the task fails, and that the report is not proof | **this file** — rules 6 and 8 |
 
 Items 2, 6 and 7 are constant across every dispatch, which is why they live here
 and a brief may state them briefly or not at all. **Items 1, 3, 4 and 5 are
@@ -265,3 +347,8 @@ Close with:
    specification, the design, or in this file.
 7. **The disclaimer**, plainly: this report is not proof of completion; every DoD
    item will be verified against the repository.
+
+**All seven are still owed when the outcome is `blocked` or `partially done`** —
+that is the case they exist for (rule 8). Fill item 5 with the branch and commit
+you left the work on when there is no PR to name, and item 6 with what stopped
+you. Only the length changes; the report itself is not optional.
