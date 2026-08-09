@@ -3,6 +3,7 @@ name: "taskflow-execute"
 description: "Orchestrate execution of a completed Taskflow from its ROADMAP status board: compute ready tasks, dispatch within dependency and conflict limits, verify repository and CI evidence, and update the board as its sole writer."
 argument-hint: "[<slug>] [scope] [--parallel=N] [--review=<depth>] [--merge=ask|on-green|never] [--dry-run]"
 allowed-tools:
+  - Bash(git --version)
   - Bash(git status:*)
   - Bash(git rev-parse:*)
   - Bash(git submodule status)
@@ -60,6 +61,7 @@ Claude Code only, and a fast path rather than a dependency. It arrives
 pre-rendered:
 
 ```!
+git --version
 git status --porcelain
 git rev-parse --abbrev-ref HEAD
 git submodule status
@@ -68,12 +70,19 @@ git branch --list worktree-*
 git ls-tree -d --name-only HEAD .taskflow
 pipeline --version
 gh auth status
+git --version
 ```
+
+`git --version` appears twice, deliberately, and is the only command here whose
+output is neither a decision input nor ever empty. It is the **sentinel frame**
+(§2.2): the first occurrence proves the block fired, the last proves it ran to
+the end instead of dying partway.
 
 ### 2.1 What each command decides
 
 | Command | Decision it closes |
 |---|---|
+| `git --version` (first **and** last line) | whether the block fired at all (§2.2) — this and nothing else |
 | `git status --porcelain` | the D6 preflight gate (§7) |
 | `git rev-parse --abbrev-ref HEAD` | the base branch |
 | `git submodule status` | empty ⇒ `references/submodules.md` is never loaded |
@@ -88,14 +97,35 @@ and the one `pipeline gc` reaps. This system has **no other branch namespace**;
 do not create branches under a different prefix and do not look for them under
 one.
 
-### 2.2 Reading the block — the output is merged and unlabelled
+### 2.2 Reading the block — first, did it fire?
 
-The eight outputs arrive **concatenated in the order above, with no separators
-and no command echoed**. Several of them are routinely empty — a clean tree, no
-submodules, no dispatched branches — so **empty is indistinguishable from
-absent**, and a line cannot always be attributed to its command with certainty.
+The outputs arrive **concatenated in the order above, with no separators and no
+command echoed**, and several are routinely empty — a clean tree, no submodules,
+no dispatched branches. A block that fired into a quiet repository therefore
+looks very much like a block that never ran.
 
-Attribute conservatively:
+**That question is settled by the sentinel frame and by nothing else.**
+
+| What the block shows | What it means | What to do |
+|---|---|---|
+| A `git version …` line **first and last** | It **fired and ran to completion** | Read it. Everything between the two sentinels is real output |
+| Neither sentinel | It did not fire — no shell, or suppressed (§2.3) | §2.4: obtain the facts directly |
+| The policy marker where output belongs | Suppressed by policy (§2.3) | §2.4 |
+| A first sentinel but no last one | It started and did not finish | Treat every fact in it as unattributable; §2.4 |
+
+**Make that determination by this check alone.** Do **not** conclude the block
+was degraded, absent or unavailable because much of it is empty, and do not
+re-run all eight commands "to be safe" on a block that carries its frame. That
+inference is precisely what failed — twice, in the same run, against a block that
+had in fact fired with real output — and it is why the frame exists rather than
+another paragraph asking for care.
+
+**Inside a complete frame, empty means empty.** A clean tree, an absence of
+submodules and no dispatched branches all render as nothing at all; between two
+sentinels that nothing is a *result*, not a missing one.
+
+Attribution of an individual line is a separate question, and there the block is
+still merged and unlabelled. Attribute conservatively:
 
 - one bare branch name on its own line is `rev-parse`;
 - `<path> <sha> [<branch>]` lines are `worktree list`;
@@ -103,15 +133,21 @@ Attribute conservatively:
 - a bare semver is `pipeline --version`;
 - a multi-line block naming a host is `gh auth status`.
 
-**Whenever a decision depends on a fact you cannot attribute with certainty, run
-that one command yourself and use its answer.** Never conclude "the tree is
-clean" or "there are no submodules" from an absence in the merged block: the D6
-gate (§7) and the third loading condition (§1) both re-run their own command
-directly rather than inferring from silence.
+**Whenever a decision depends on a fact you cannot attribute to its command with
+certainty, run that one command yourself and use its answer** — that one command,
+not the block again.
+
+Two decisions re-run their own command directly **whatever the frame says**,
+because each is cheap and each is load-bearing: the D6 gate (§7), which stops the
+run, and the third loading condition (§1), which decides whether a reference
+module is read at all. Those two are belt-and-braces on purpose, and they keep
+§7 and §1 correct on a host where the block never fires.
 
 ### 2.3 Degradation is a normal path, not an exceptional one
 
-Three ways the block yields nothing, all expected:
+Three ways the block yields nothing, all expected. **In all three the sentinel
+frame is missing, and that — not the emptiness of any particular output — is how
+each is recognised (§2.2):**
 
 1. **No shell.** The block runs under bash and `shell:` is deliberately left
    unset, so a Windows host without Git Bash — or any non-Claude host — produces
@@ -123,13 +159,14 @@ Three ways the block yields nothing, all expected:
    [shell command execution disabled by policy]
    ```
 
-   **Check for it before trusting the block.** Treat any other text standing
-   where output was expected — a permission error, or the eight command lines
-   echoed back verbatim — the same way.
+   Treat any other text standing where output was expected — a permission error,
+   or the command lines echoed back verbatim — the same way.
 3. **Permission.** The block is permission-checked as a **single multi-part
    command**: one part the grant does not cover fails the whole block, not just
    that line. The frontmatter grant above exists for exactly this, and it is
-   read-only in every entry (§14).
+   read-only in every entry (§14). This is also why the sentinel carries its own
+   grant entry, `Bash(git --version)`: an ungranted sentinel would fail the very
+   block it exists to vouch for.
 
 In all three cases the run continues, because nothing here depends on the
 injection having happened.
@@ -157,6 +194,13 @@ to a shell; the block therefore takes no input at all, and the argument
 placeholder token is deliberately used nowhere in this file. Commands are bare
 invocations with no pipes, redirects or subshells, and the branch glob is
 written unquoted so there is no quoting surface either.
+
+**The sentinel is bound by every rule in this section**, which is why it is a
+second copy of an existing read-only command rather than an echoed marker string:
+a marker would either need a new grant broad enough to cover arbitrary text, or a
+literal chosen for this file and matched nowhere else. `git --version` takes no
+input, writes nothing, cannot fail where the other git commands succeed, and its
+output collides with no other line in the block.
 
 ---
 
@@ -313,9 +357,10 @@ the dirt may belong to another agent working in the same shared checkout, which
 is exactly what was found when this design was framed. `--dry-run` skips this
 gate deliberately (§6.3).
 
-Because §2's silence is ambiguous (§2.2), confirm the tree state by running
-`git status --porcelain` directly rather than reading emptiness out of the
-merged block.
+Confirm the tree state by running `git status --porcelain` directly, **whatever
+§2's block shows and even when its sentinel frame is intact** (§2.2). This gate
+stops the run, it costs one command, and running it directly is what keeps §7
+correct on a host where the block never fires at all.
 
 **The invariant.** During `--parallel > 1`, exactly three writes to the main
 checkout are legal, all performed by the orchestrator, all at round boundaries:
@@ -405,6 +450,10 @@ failure`.
 
 ## 10. The round
 
+Nine steps, and they are **one unit of work** — not nine places it is acceptable
+to stop. §10.1 says when that unit is finished, §10.2 says how it stays parallel
+while being finished, and §10.3 is the check that runs before the turn ends.
+
 1. **Compute** the ready set (§5) and the slot count (§6). With `--dry-run`,
    stop here and print the plan.
 2. **Gate check.** Production, money, secrets or irreversible effects require a
@@ -415,12 +464,17 @@ failure`.
    arrangement, its branch and base, and its isolation boundary. Never the
    board, never other tasks, never permission to merge. Flip each dispatched row
    to `🔵` with its run reference and date, and **commit the board once** for the
-   whole round.
-4. **Track** through the available forge/CI evidence; fall back to local branch,
-   commit, test and review evidence. Do not busy-wait.
+   whole round. Issue the round's dispatch calls **together** (§10.2). **This
+   step does not end the round and does not end the turn** (§10.1).
+4. **Track** every dispatched task to an outcome, **inside the same turn**
+   (§10.2), through the available forge/CI evidence; fall back to local branch,
+   commit, test and review evidence. Do not busy-wait — and do not end the turn
+   in order to wait.
 5. **Review**, when `--review != off`, before any merge, by a subagent that is
    never the implementer. `references/code-review.md` owns depths, gating and the
-   fix loop.
+   fix loop. Review is a step **inside** the round, dispatched the same way as
+   step 3 and tracked the same way as step 4; a round that reached step 3 and
+   never reached here has not reviewed (§10.3).
 6. **Merge** per `--merge`: `ask` holds the row at `🟣` and waits for the owner;
    `on-green` merges only when its conditions all hold; `never` stops at `🟣`
    permanently. Merging never bypasses branch protection and never elevates.
@@ -432,8 +486,101 @@ failure`.
 8. **Sync submodule pointers**, when that module is loaded, once for the round.
 9. **Recompute** the ready set and start the next round.
 
+### 10.1 A round is complete when it is written down, not when it is dispatched
+
+> **A dispatch round is not complete when its workers are dispatched.** It is
+> complete when every task dispatched in it has been **tracked to an outcome,
+> verified against the repository, and written to the board**. **The orchestrator
+> does not end its turn between dispatch and that outcome.**
+
+Steps 4–9 are not the part of the round that happens if there is time left. They
+are the part that makes step 3 mean anything: a run that stops after step 3 has
+started work, recorded that it started, and read none of it. It has also, at that
+point, produced no review, no pull request and no verified row — while its own
+exit status says success.
+
+**The corollary is the operative half. If the orchestrator cannot track a
+dispatch to completion, it must not dispatch it.** Dispatch fewer workers, or
+none at all, and leave the remainder `⬜ pending` for the next round.
+
+A pending row is a true statement about an idle slot. A `🔵` row over a live slot
+whose result nobody will read is a false one — and it is *worse* than the task
+never having started, because the board now claims work is in progress that no
+one will collect, and §12's resume must reconstruct the truth from the tree
+instead of reading it. A resume that misreads that state can reap live work,
+which is what happened in this design's own proving run.
+
+This binds the concrete case already in §6: when a spawn is refused with
+`Concurrent subagent limit reached`, the refused task's row stays `⬜ pending`,
+and the calls already issued are still tracked to their outcomes. Never dispatch
+past what can be tracked in the hope of collecting it afterwards.
+
+### 10.2 Concurrent and tracked are not opposites
+
+The invariant costs no parallelism, because dispatch is not sequential. A round's
+workers are dispatched as **concurrent calls issued together and waited on as one
+batch**: the concurrency comes from issuing them together, the tracking comes
+from the turn not ending until the batch returns. Neither is bought with the
+other.
+
+**On Claude Code the batch is *N* subagent-dispatch calls emitted in a single
+assistant message with `run_in_background: false`.** The host runs them in
+parallel and returns all *N* outcomes before the turn continues. What matters is
+the pair of properties, not the tool's name: *issued together* and *returning to
+the calling turn*.
+
+Two ways to get this wrong; the proving run found both.
+
+- **Backgrounding a worker whose result the round needs.**
+  `run_in_background: true` returns a task id immediately and no outcome; the
+  outcome arrives only as a notification in a **later turn**. In a
+  non-interactive (`-p`) session there is no later turn, so it is never read: the
+  round ends at "dispatched", every dispatched row keeps a `🔵` over a live slot,
+  and the process still exits `success`.
+- **One foreground call per message.** This tracks correctly and delivers peak
+  concurrency **1**, whatever `--parallel` said. `--parallel=N` is a promise about
+  how many workers are in flight *at once*; honouring it one worker at a time
+  honours nothing.
+
+A round contains **several** such batches — the implementers, then the reviewers,
+then each round of the fix loop. Batches are expected; a batch boundary is a
+wait, not a turn boundary. What a round contains is **no turn boundary at all**.
+
+Spawn starts stagger by a second or two as the host creates each worker. That is
+spawn latency, not serialization.
+
+**Verified on the host rather than assumed.** Three subagents were
+dispatched in one message with `run_in_background: false`, each stamping its own
+start and end time around a fixed 25-second wait: all three intervals overlapped
+for 18.5 s, the batch finished in 31.6 s of wall clock against a 75 s serial
+floor, and all three outcomes returned to the dispatching turn. The same probe
+with `run_in_background: true` returned an id and no outcome, and its result
+arrived only in a later turn, as a notification.
+
+### 10.3 Closing the round
+
+Before the turn that ran a round ends, confirm all four. This is a check, not a
+narration:
+
+1. **Every id dispatched this round has a recorded outcome** — merged, `🟣`,
+   `⛔`, or an open PR whose state is named. No dispatched id is unaccounted for.
+2. **With `--review != off`, every dispatched task that produced a diff was
+   reviewed by a dispatched reviewer.** A round that dispatched workers and zero
+   reviewers has not reviewed quickly; it has not reviewed. In a completion
+   report a `--review` depth that never ran and a review that found nothing look
+   identical, and this check is the only thing separating them.
+3. **The board is written and committed for the round** (§9).
+4. Where `references/parallel-execution.md` is loaded, its §12.1 audit has run —
+   it is a per-round check, not a per-interruption one.
+
+**A round that cannot satisfy all four reports itself as incomplete**, naming
+which of the four failed and which ids are affected. Reporting success for a
+round that stopped at "dispatched" is worse than reporting failure: a failure is
+acted on, while a false success is what allowed a run to dispatch two workers,
+review nothing, open no pull request, and exit `success`.
+
 At each wave boundary, report landed / running / blocked work, risks and
-resource concerns, and audit worktrees and branches before continuing.
+resource concerns, on top of the per-round check above.
 
 ---
 
@@ -451,6 +598,10 @@ Assert these; do not assume them.
 5. Every `🔵` row has a live slot or an open PR, and every live slot has a `🔵`
    **or `⛔`** row. A `⛔` row keeps its slot deliberately, for post-mortem; a
    slot with no row at all is a leak.
+6. Every task dispatched in a round has a recorded outcome before that round's
+   turn ends (§10.1). A `🔵` row this run created and is no longer tracking is a
+   defect, not a state — it is invariant 5 passing on evidence that has already
+   stopped being maintained.
 
 ---
 
@@ -483,6 +634,12 @@ group concurrently, edit a task specification, implement inline yourself, leave
 a board change uncommitted, force-push, delete a branch that is not this run's
 own `worktree-*` slot, or pass a bypass flag to a merge.
 
+Never **end a turn with a dispatch outstanding** (§10.1), and never report a run
+as successful when any of its rounds stopped short of §10.3. A run that
+dispatched work it did not track reports what it dispatched, what it never
+collected, and that it is incomplete — including when its own exit status would
+otherwise read as success.
+
 ---
 
 ## 14. Host portability
@@ -502,6 +659,16 @@ own `worktree-*` slot, or pass a bypass flag to a merge.
   prompt, it fails the whole snapshot.
 - `argument-hint` is **Claude Code only**: inert on Codex, and a hard error if
   this skill is ever packaged for the Skills API. A port must drop it.
-- §2's injection is a Claude Code fast path. §1's table, §2.4's instructions and
-  everything else in this file are host-neutral, which is why module loading is
-  decided by the table and never by argument preprocessing.
+- §2's injection is a Claude Code fast path, and §2.2's sentinel frame is how a
+  port tells a host that has one from a host that does not. §1's table, §2.4's
+  instructions and the rest of this file are host-neutral, which is why module
+  loading is decided by the table and never by argument preprocessing.
+- **§10 splits along the same seam, and a port must keep the halves apart.**
+  §10.1's invariant and §10.3's check are host-neutral: a round is complete when
+  its outcomes are recorded, on any host. §10.2's *mechanism* is not —
+  `run_in_background` and single-message batching are this host's. A port states
+  its own equivalent: the primitive that issues several dispatches at once, and
+  the setting that makes a dispatch return its outcome to the calling turn. **If
+  a host offers no such primitive, §10.1's corollary decides the matter** — that
+  port dispatches one task per round and says so, rather than dispatching work it
+  cannot track.
