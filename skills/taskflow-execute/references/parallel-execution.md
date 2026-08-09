@@ -539,28 +539,43 @@ There is exactly one command in a taskflow run that can elevate, and the
 orchestrator is responsible for stopping it.
 
 **`pipeline submodule bump` lands its pointer commit through its own pull
-request, and its land step retries a refused merge with `gh pr merge --admin` by
-default**, reporting `merged_via_admin: true` when it did. That is the command's
-internal behaviour, not the orchestrator's policy — but a run that invokes it
-unmodified has elevated, whatever the policy says.
+request, and by default its land step retries a refused merge with
+`gh pr merge --admin`**, reporting `merged_via_admin: true` — equivalently
+`merge_outcome: "admin"` — when it did. That is the command's default, not the
+orchestrator's policy; but a run that invokes it unguarded has elevated,
+whatever the policy says.
 
 Therefore:
 
-- **The orchestrator must suppress that elevation** by passing the CLI's
-  non-elevating option on every `submodule bump` invocation. That option is being
-  added by a companion CLI task and **is not present in the CLI version this
-  document was verified against**, which is why no flag spelling is quoted here —
-  read the command's own usage output, or `docs/cli.md`, for the current
-  spelling before wiring it in.
-- **Until it is available**, either accept that this one command may elevate and
-  **report `merged_via_admin: true` prominently in the round report**, or skip
-  the guarded bump and do the pointer bump by hand. Do not leave an elevation
-  unreported on the theory that it was the CLI's decision.
+- **The orchestrator suppresses that elevation by passing `--no-admin`, on every
+  `submodule bump` invocation.** It is a bare flag, no value. Every invocation —
+  including a `--dry-run` rehearsal. Not conditional on whether the repository
+  looks protected: the orchestrator does not decide that per run.
+- **The flag is what makes §9.3 true of this command.** With it, the plain merge
+  is attempted once, a refusal is reported and terminal — `status: "halted"`,
+  `merge_outcome: "refused"`, `halt_reason` naming the PR, GitHub's own text in
+  `stderr`, exit **1** — and `gh` is never invoked with `--admin` at all. Without
+  it, the CLI's default fallback is live and the promise is only prose.
+- **A refused bump is reported and retried, never routed around.** Nothing is
+  lost: the commit is on `origin` and the PR is open, so the bump lands by
+  satisfying the gate that refused it, exactly like a task PR. Leave the pointers
+  unbumped and let the next round retry. Do not re-run the command without the
+  flag, and do not hand-merge past the gate.
+- **`merged_via_admin: true` in a bump report is a defect, not a note.** The flag
+  makes that outcome unreachable, so seeing it means the invocation omitted
+  `--no-admin`. Fix the invocation; report the elevation that already happened as
+  a finding against the run.
 - The bump procedure itself — when it runs, which submodules it names, how its
   `skipped[]` entries are read — belongs to `references/submodules.md` §6 and is
   not repeated here.
 
-This is the only exception. Task PRs never elevate, under any flag, in any tier.
+The CLI's default is still the fallback, deliberately: flipping it would change
+every existing caller's behaviour without their asking. The burden of opting out
+sits with the automated caller that made the promise, and here that caller is
+this orchestrator.
+
+This is the only command that has to be told not to elevate. Task PRs never
+elevate, under any flag, in any tier.
 
 ---
 
@@ -679,8 +694,8 @@ the deliverable; a `gc` whose output nobody reads has collected nothing.
   decision.
 
 Finish by reporting verified results, withheld tasks and why (§2.1), preserved
-worktrees and why (§12.2), any `merged_via_admin` from §9.4, and every
-outstanding gate.
+worktrees and why (§12.2), any bump that reported `merged_via_admin: true` —
+as the §9.4 defect it is, not as a routine line — and every outstanding gate.
 
 ---
 
@@ -701,7 +716,7 @@ either.
 | `pipeline ci-wait` | `--pr` `--repo` `--timeout` `--interval` `--grace` `--fail-fast` / `--no-fail-fast` `--json` `--verbose` |
 | `pipeline gc` | `--project` `--clean` `--json` `--no-submodules` `--force-worktree-branches` |
 | `pipeline drive` | `--root` `--run-id` `--start` `--effort <step_id>=<level>` `--json` |
-| `pipeline submodule bump` | flags owned by `references/submodules.md` §6; the non-elevating option is deliberately unquoted here (§9.4) |
+| `pipeline submodule bump` | `--no-admin`, on every invocation (§9.4). The remaining flags are owned by `references/submodules.md` §6 |
 | `git worktree list`, `git branch --list worktree-*`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git -C <checkout> pull --ff-only` | git |
 | `gh api repos/…/branches/…/protection`, `gh api repos/…/rulesets`, `gh pr merge` | GitHub CLI |
 

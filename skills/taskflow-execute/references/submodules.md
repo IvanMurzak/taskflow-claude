@@ -215,6 +215,7 @@ worker's worktree.
 pipeline submodule bump --project-root <root> \
                         --submodules <path-a,path-b> \
                         --base <superproject-base-branch> \
+                        --no-admin \
                         --json
 ```
 
@@ -224,10 +225,12 @@ pipeline submodule bump --project-root <root> \
 | `--submodules` | Comma-separated paths — **the ones that moved this round**. Omit it and the command auto-detects every drifted pointer, sweeping in drift that predates the run. Pass it explicitly. |
 | `--base` | The **superproject's** base branch (default `main`). This is *not* the submodule's integration branch: it is the branch the pointer commit lands on. It is the one branch in this procedure that does not vary per submodule. |
 | `--source-worktree` | Optional: where the merged submodule state lives, when that is not the superproject's own checkout. |
-| `--dry-run` | Print the planned actions and change nothing. |
+| `--dry-run` | Stage the change, capture the diff, then stop before push/PR/merge. Mutates nothing on the base branch. |
+| `--no-admin` | **Passed on every invocation, always.** A bare flag that turns off the command's `--admin` merge retry, so a merge GitHub refuses is reported instead of bypassed. See *Elevation is suppressed, not surfaced* below. |
 
 Output is one JSON object with `status` (`committed` · `noop` · `dry-run` ·
 `halted`), `bumped[]`, `skipped[]` (each with a `reason`), `pr`,
+`merge_outcome` (`"plain"` · `"admin"` · `"refused"` · `null`),
 `merged_via_admin`, and `halt_reason`. Exit **0** for committed/noop/dry-run,
 **1** halted, **2** usage or environment error.
 
@@ -256,11 +259,33 @@ Two consequences follow from landing through a PR:
 - Branch protection and required checks apply to the bump exactly as they apply
   to a task PR.
 
-The command's own land step will retry its merge with `--admin` if the plain
-merge is refused, and reports `merged_via_admin: true` when it did. That is the
-command's internal behavior, and it is **not** the orchestrator's merge policy —
-task PRs are never merged with elevation. If a bump reports `merged_via_admin`,
-surface it in the round report rather than letting it pass silently.
+### Elevation is suppressed, not surfaced
+
+**`--no-admin` is on every invocation of this command.** Without it, the land
+step retries a refused `gh pr merge` once with `--admin` — GitHub's administrator
+bypass — and the landing PR merges *despite* the rule that refused it. The CLI's
+default is still that fallback, so omitting the flag is not neutral: it opts in
+to the bypass. The orchestrator never merges with elevation, and that promise is
+only real when the flag is actually on the command line.
+
+With the flag passed, the plain merge is attempted once and a refusal is
+terminal and reported — `status: "halted"`, `merge_outcome: "refused"`,
+`halt_reason` naming the PR, GitHub's own text in `stderr`, exit **1** — and
+`gh` is never invoked with `--admin` at all. Nothing is lost: the commit is on
+`origin` and the PR is open, so the bump lands by satisfying whatever gate
+refused it, exactly like a task PR. Handle it as §7's halt row says — report,
+leave the pointers unbumped, let the next round retry. Never re-run it without
+the flag.
+
+Consequently `merged_via_admin: true` (equivalently `merge_outcome: "admin"`) is
+**unreachable when the flag was passed**. A bump that reports it is evidence the
+invocation omitted `--no-admin` — a defect in the invocation, to be fixed, with
+the elevation that already happened reported as a finding against the run. It is
+not a routine round-report line.
+
+A `--dry-run` is the cheapest confirmation that the flag reached the command:
+its `planned_actions` name the merge that would be attempted, and that line
+reads `(with --admin fallback)` only while the fallback is still live.
 
 ### Without the CLI
 
@@ -293,7 +318,8 @@ merge.
 | Pointer bump halted (`status: halted`, exit 1) | Report `halt_reason` verbatim. **Leave the pointers unbumped.** Do not force-push. The next round retries. |
 | Parent push rejected — non-fast-forward, protected branch, failing required check | Report it. Leave the pointers unbumped. No force-push, and no elevation flag added by the orchestrator. |
 | `gh` absent or unauthenticated | The bump exits 2 on environment. Report once that pointers are unbumped for this run and continue; this is the same degradation the run already announces for the PR path. |
-| Bump reports `merged_via_admin: true` | The land succeeded but the plain merge was refused. Record it in the round report. |
+| Bump reports `merge_outcome: "refused"` (with `status: halted`) | GitHub refused the landing PR's merge and `--no-admin` kept it from being forced — the flag working, not an error to route around. Report the PR and GitHub's text from `stderr`; land it by satisfying the gate. **Never re-run without `--no-admin`.** |
+| Bump reports `merged_via_admin: true` (`merge_outcome: "admin"`) | **`--no-admin` was not passed on that invocation.** Branch protection was bypassed on the orchestrator's behalf. Fix the invocation, and report the elevation as a finding against the run — not as a routine note. |
 | Entries in `skipped[]` | Report path and reason. Do not re-run with `--submodules` widened to force them through — the skip is the guard doing its job. |
 | A pointer is drifted that no task this round touched | Pre-existing drift, out of scope for the round's bump — which is why `--submodules` is passed explicitly. Report it; do not fold it in silently. |
 | An uninitialized (`-`) submodule appears in the touched set | Contradiction: it has no checkout and cannot have received a merge. Report it and skip; do not initialize it as part of the sync. |
