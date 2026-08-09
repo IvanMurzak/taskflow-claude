@@ -67,7 +67,7 @@ Default `auto`.
 | Tier | Needs | Provides |
 |---|---|---|
 | `native` | Nothing beyond Claude Code's own worker isolation — no CLI required | One worktree per task, with an enforced main-checkout boundary. Cannot allocate a port, cannot give a task its own submodule worktree, and cannot cut a worktree from any branch but the repository's default. |
-| `toolkit` | The `pipeline` CLI, at or above the minimum version that ships `pipeline worktree` (unset as of this writing — no published release ships it yet, so `--engine=auto` currently always resolves to `native`, and the run states why) | Everything `native` provides, plus a port block, per-submodule worktrees, an arbitrary base branch, `ci-wait`, `submodule bump` and `gc` |
+| `toolkit` | The `pipeline` CLI, at or above the minimum version that ships `pipeline worktree` — **0.16.0**, published. `--engine=auto` resolves to `toolkit` once the installed CLI is at or above that version (below it, absent, or unparseable ⇒ `native`, and the run states why) | Everything `native` provides, plus a port block, per-submodule worktrees, an arbitrary base branch, `ci-wait`, `submodule bump` and `gc` |
 | `pipeline` | Explicit `--engine=pipeline --pipeline=<name>` | Each task becomes one `pipeline drive` run, which owns implement → review → PR → CI → merge → sync itself. `--merge` does not apply here |
 
 Because `native` needs nothing beyond Claude Code itself, **parallel dispatch
