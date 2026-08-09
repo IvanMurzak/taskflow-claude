@@ -1,0 +1,27 @@
+README.md
+  s_f5e65a594ec2d4::t_bdcbc00ea59d4b 3,15
+skills/taskflow-review/SKILL.md
+  s_f5e65a594ec2d4::t_bdcbc00ea59d4b 62-63
+.github/workflows/release.yml
+  s_f5e65a594ec2d4::t_309d507d97e6f0 1-44
+skills/taskflow-tasks/SKILL.md
+  s_f5e65a594ec2d4::t_bdcbc00ea59d4b 98-99
+.github/workflows/validate.yml
+  s_f5e65a594ec2d4::t_309d507d97e6f0 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fc05d3817d440e25f0fddb165314fad3865e77e3",
+  "prompts": {},
+  "sessions": {
+    "s_f5e65a594ec2d4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc66c-df58-72e0-a9df-8a2531918de0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
