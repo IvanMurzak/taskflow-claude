@@ -587,6 +587,7 @@ Every response is defined, announced, and non-forcing. Exactly one halts the run
 |---|---|
 | **Dirty main checkout at preflight** | Stop before any dispatch. Report the dirty paths. No stash, no clean |
 | **Slot creation fails** | The row stays pending. Reap the partial slot with `pipeline worktree destroy --name <task-id> --outcome completed` — `completed` reaps, and `halted` would *preserve*, which is wrong for a slot with nothing in it. **Do not retry blindly** |
+| **Host refuses to create the isolation worktree** — `native` tier, before any `pipeline worktree` slot exists at all: *"Refusing to use … as an isolation worktree: … git metadata could not be resolved … Isolation is refused rather than assumed"* | **Fails closed, correctly** — no silent fall-back to the main checkout, so this is a retry situation, not a corruption one. But the refused attempt leaves the worktree **locked**, and that locked leftover is what makes the very next attempt fail the same way. **Do not retry blindly** — retrying straight against the same lock only compounds the leftovers, not clears them. `git worktree prune` (main checkout) to clear the stale, locked registration, then retry the dispatch once |
 | **`create` reports `reused`** | Duplicate dispatch (§5). Do not proceed with the worker. Reconcile via §11 |
 | **`gh` absent or unauthenticated** | There is no PR path. Workers push branches only, rows stop at `🟣`, and the run says so **once** — not per task |
 | **Base-branch fast-forward fails** | Do not force. Report and continue the round; the next round retries |
@@ -637,23 +638,62 @@ alone. The board records what was *dispatched*; the tree records what *happened*
 
 ## 12. Cleanup
 
-### 12.1 Per task, on success
+### 12.1 The wave-boundary audit — every round, not only on interruption
+
+Run §11's reconciliation — `git worktree list`, `git branch --list worktree-*`,
+the board's `🔵` rows — **after every round**, not only when a session resumes
+from an interruption. This is invariant 5 (`04-subsystem-rules.md` §9), stated
+there as a property; here it is the instruction to *check* it: every `🔵` row
+has a live slot or an open PR, every live slot has a `🔵` **or `⛔`** row, and a
+slot with no row at all is a leak.
+
+**This is the audit that caught F-12, and nothing else would have.** A leaked
+local branch does not fail a task, does not fail CI, and does not block a merge
+— it is invisible to every other check this runbook runs. The same is true of a
+slot directory that survived its own removal behind a file lock: the removal
+already reported failure and the round already moved on, correctly, and nothing
+came back to look. Only a deliberate round-boundary comparison of slots against
+branches against rows surfaces either one before it compounds. A run that only
+reconciles on interruption finds this after nine merges instead of after one.
+
+The audit itself changes nothing — it is a read, not a `--clean`. Flag what it
+finds in the round report; §12.2's per-task cleanup and §12.4's run-completion
+`pipeline gc` are what act on it.
+
+### 12.2 Per task, on success
 
 ```
 pipeline worktree finalize --name <task-id> [--json]      # where a terminal hook exists
 pipeline worktree destroy  --name <task-id> --outcome completed [--json]
 ```
 
-- **`destroy --outcome completed` reaps**: `PIPELINE_WT_DELETE_BRANCHES=1`, and
-  the slot record is dropped.
+- **`destroy --outcome completed` reaps**: `PIPELINE_WT_DELETE_BRANCHES=1` — the
+  worktree, every submodule worktree it provisioned, and the local
+  `worktree-<task-id>` branch **in each of those repositories**, not only the
+  slot directory — and the slot record is dropped.
 - **`finalize` is strict must-succeed** — only an explicit `{"ok":true}` from the
   consumer's terminal hook passes, and a **missing** hook fails too. Call it only
   where the project defines one; a failure is reported and the slot preserved,
   never swallowed.
-- In the `native` tier there is nothing to destroy: the host locks the slot for
-  the agent's lifetime and sweeps it afterwards.
+- **In the `native` tier there is nothing to destroy, and that is exactly where
+  the local branch leaks.** The host locks the slot for the agent's lifetime and
+  sweeps the worktree afterwards, but the sweep removes the working directory,
+  not the branch: `worktree-<task-id>` stays a real local branch of the main
+  checkout's repository after the sweep, merged or not, remote-deleted or not —
+  `gh pr merge --delete-branch` only ever reaches the *remote* copy. Nothing in
+  this subsection reaps that local branch; §12.4's `pipeline gc [--clean]` at run
+  completion is the step that does (F-12).
+- **A removal that fails is not final.** The most common cause on Windows is a
+  file lock held at the moment of removal — `destroy` (or the host's sweep)
+  reports the failure and the round continues, correctly; forcing it inline is
+  not this subsection's job. Record the path and move on. `pipeline gc [--clean]`
+  at run completion re-scans the same ground — including the built-in slot root
+  outside the repository, which it now covers (`a8`) — and reaps what it finds
+  there through the same teardown, by which point a transient lock has usually
+  cleared. Report anything that still survives after that as a residual for the
+  run report, not as something to keep retrying by hand mid-run.
 
-### 12.2 Per task, on failure — the worktree is kept
+### 12.3 Per task, on failure — the worktree is kept
 
 **A failed task keeps its worktree.** `⛔` rows, rows that exhausted the review
 fix loop, rows with a merge conflict: the slot stays, and **its path is recorded
@@ -669,7 +709,7 @@ reaped with `completed`, because there is nothing to preserve.
 provisioned and whether each is still on disk — use it to build the "what was
 preserved and why" section of the report.
 
-### 12.3 At run completion
+### 12.4 At run completion
 
 When every scoped row is verified complete: update the taskflow README status and
 the ROADMAP counter, remove any thin pointer created for this run, then
@@ -684,9 +724,19 @@ branches, per initialized submodule as well as in the superproject. Reporting is
 the deliverable; a `gc` whose output nobody reads has collected nothing.
 
 - **`--clean`** prunes records, removes fully-merged worktrees, deletes stale
-  directories and safe-deletes merged branches (`git branch -d`, never `-D`).
-  Run it as a decision, not reflexively, and never while a `⛔` row's slot is
-  still wanted for inspection.
+  directories and safe-deletes merged branches (`git branch -d`, never `-D`) —
+  per submodule too, and, since `a8`, across the built-in slot root outside the
+  repository as well as `.claude/worktrees`. **This is the step that closes
+  F-12**: it is the only point in the run that reaps a `native`-tier local
+  branch §12.2 could not touch, and the only point that retries a slot directory
+  an earlier `destroy` failed to remove. Run it — do not treat it as merely
+  optional housekeeping — but never while a `⛔` row's slot is still wanted for
+  inspection.
+- **A safe `-d` delete does not reap a squash-merged branch.** Git never sees the
+  original commits as ancestors of a squash commit, so it reads as unmerged
+  forever. If task PRs in a given repository squash-merge, plain `--clean`
+  leaves those local branches behind even after this step; only
+  **`--force-worktree-branches`** (below) reaches them.
 - **`--force-worktree-branches`** (requires `--clean`) additionally hard-deletes
   **unmerged** `worktree-*` branches — squash-merged branches read as unmerged
   forever, which is the case it exists for. It destroys unmerged work by
@@ -694,7 +744,7 @@ the deliverable; a `gc` whose output nobody reads has collected nothing.
   decision.
 
 Finish by reporting verified results, withheld tasks and why (§2.1), preserved
-worktrees and why (§12.2), any bump that reported `merged_via_admin: true` —
+worktrees and why (§12.3), any bump that reported `merged_via_admin: true` —
 as the §9.4 defect it is, not as a routine line — and every outstanding gate.
 
 ---
@@ -717,7 +767,7 @@ either.
 | `pipeline gc` | `--project` `--clean` `--json` `--no-submodules` `--force-worktree-branches` |
 | `pipeline drive` | `--root` `--run-id` `--start` `--effort <step_id>=<level>` `--json` |
 | `pipeline submodule bump` | `--no-admin`, on every invocation (§9.4). The remaining flags are owned by `references/submodules.md` §6 |
-| `git worktree list`, `git branch --list worktree-*`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git -C <checkout> pull --ff-only` | git |
+| `git worktree list`, `git worktree prune`, `git branch --list worktree-*`, `git diff --name-only <base>...HEAD`, `git merge-base`, `git submodule status`, `git -C <checkout> pull --ff-only` | git |
 | `gh api repos/…/branches/…/protection`, `gh api repos/…/rulesets`, `gh pr merge` | GitHub CLI |
 
 **Named only to forbid them:** `--force` on slot creation (the CLI exposes none
