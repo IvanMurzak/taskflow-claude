@@ -100,7 +100,14 @@ false green costs the whole run.
 ### 5. Push your branch and open a PR against the base your brief names
 
 Your branch is `worktree-<task-id>` — the substrate's namespace, and the only
-branch namespace in this system. Do not invent another prefix.
+branch namespace **this skill creates**. Do not invent another prefix.
+
+That is narrower than it first reads, and the difference is not yours to act on.
+The raw `worktree-*` glob also matches the host's own `worktree-agent-<hash>`
+isolation branches — the placement described in §0, a different owner and a
+different lifetime — which this skill neither creates nor reaps. So a
+`worktree-*` branch is not by itself one of this run's tasks. Your side of it is
+unchanged: you cut and push `worktree-<task-id>`, and nothing else.
 
 **The base branch is whatever your brief names, and your brief always names it.**
 Never infer it, never fall back to `main` because it is the usual answer:

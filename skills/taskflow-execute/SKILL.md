@@ -87,7 +87,7 @@ the end instead of dying partway.
 | `git rev-parse --abbrev-ref HEAD` | the base branch |
 | `git submodule status` | empty ⇒ `references/submodules.md` is never loaded |
 | `git worktree list` | orphaned slots left by a previous run |
-| `git branch --list worktree-*` | already-dispatched work to reconcile (§12) |
+| `git branch --list worktree-*` | candidate already-dispatched work to reconcile (§12) |
 | `git ls-tree -d --name-only HEAD .taskflow` | which taskflows exist |
 | `pipeline --version` | execution-tier resolution, against §8.1's constant |
 | `gh auth status` | whether a PR path exists at all |
@@ -182,7 +182,7 @@ injection having happened.
 | Base branch | `git rev-parse --abbrev-ref HEAD` |
 | Submodules present | `git submodule status` |
 | Orphaned slots | `git worktree list` |
-| Dispatched branches | `git branch --list worktree-*` |
+| Candidate dispatched branches (§12) | `git branch --list worktree-*` |
 | Taskflows available | `git ls-tree -d --name-only HEAD .taskflow`, or list `.taskflow/` |
 | CLI version | `pipeline --version` |
 | PR path available | `gh auth status` |
