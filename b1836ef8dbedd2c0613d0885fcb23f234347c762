@@ -1,0 +1,19 @@
+skills/taskflow-execute/SKILL.md
+  s_858a28e61809ef::t_b8ff74a1a85fa1 359,362-371
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b1836ef8dbedd2c0613d0885fcb23f234347c762",
+  "prompts": {},
+  "sessions": {
+    "s_858a28e61809ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "168203e0-189e-4bb7-bf8c-03355d462f60",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
