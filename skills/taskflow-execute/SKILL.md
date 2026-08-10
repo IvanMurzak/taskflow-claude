@@ -401,8 +401,23 @@ typed.
 ### 8.1 The minimum version constant
 
 ```
-minimum pipeline version = 0.16.0 — the first published release shipping `pipeline worktree`
+minimum pipeline version = 0.17.0
+  — the first published release whose `pipeline worktree list --json` reports a
+    hook-provisioned slot's `submodule_slots[].dir`
 ```
+
+**Do not re-derive this number from "the first release shipping `pipeline
+worktree`."** That derivation yields `0.16.0`, and `0.16.0` is unsafe. Shipping
+the `worktree` command is not the property this skill depends on.
+`references/parallel-execution.md` §12's reaping precondition enumerates the
+repositories a slot spans from
+`submodule_slots[].dir`, and on released `0.16.0` that array is **`[]` for every
+hook-provisioned slot**. A run there resolves `toolkit`, reconciles from an empty
+list, and concludes that a submodule slot holding uncommitted work is an empty
+shell — the verdict that destroyed 21,880 bytes of finished implementation.
+`0.17.0` is the first release that reports those directories, which is why the
+constant is `0.17.0` and not `0.16.0`. Refusing `0.16.0` falls back to `native`,
+and that is the safe answer: `native` never consults `submodule_slots` at all.
 
 `--engine=auto` reads `pipeline --version` and compares it against that constant
 **numerically** — never by testing whether the binary exists, and never by
