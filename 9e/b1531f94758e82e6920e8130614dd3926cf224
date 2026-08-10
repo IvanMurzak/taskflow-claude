@@ -1,0 +1,21 @@
+README.md
+  s_32c9ade92e24ec::t_6063f62d988499 70
+skills/taskflow-execute/SKILL.md
+  s_32c9ade92e24ec::t_35bb7c3e45d40e 404-406,409-421
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9eb1531f94758e82e6920e8130614dd3926cf224",
+  "prompts": {},
+  "sessions": {
+    "s_32c9ade92e24ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_32c9ade92e24ec",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
