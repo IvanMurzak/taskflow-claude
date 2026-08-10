@@ -1,0 +1,21 @@
+agents/taskflow-implementer.md
+  s_01b211d7560457::t_783d4bbcf2294b 103-110
+skills/taskflow-execute/SKILL.md
+  s_01b211d7560457::t_22f38f7ab0db3c 90,185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9c2eb4bc3b628b5665a06882d31ce5bb3066f3d3",
+  "prompts": {},
+  "sessions": {
+    "s_01b211d7560457": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_01b211d7560457",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
