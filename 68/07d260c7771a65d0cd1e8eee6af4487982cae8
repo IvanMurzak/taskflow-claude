@@ -1,0 +1,14 @@
+skills/taskflow-execute/references/parallel-execution.md
+  h_8325a340bf5897 36,45-46,48-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6807d260c7771a65d0cd1e8eee6af4487982cae8",
+  "prompts": {},
+  "humans": {
+    "h_8325a340bf5897": {
+      "author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
