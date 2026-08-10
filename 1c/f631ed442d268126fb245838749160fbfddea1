@@ -1,0 +1,21 @@
+.github/workflows/release.yml
+  s_17564cc8e74c13::t_3bc85a935692d3 23,33
+.github/workflows/validate.yml
+  s_17564cc8e74c13::t_c3b96460e1e951 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1cf631ed442d268126fb245838749160fbfddea1",
+  "prompts": {},
+  "sessions": {
+    "s_17564cc8e74c13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_17564cc8e74c13",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
