@@ -33,7 +33,7 @@ sentence so this file reads standalone.
 | Tier | Precondition | Provides |
 |---|---|---|
 | `native` | The host offers worker isolation (Claude Code does) | One worktree per worker with an **enforced** main-checkout boundary, gitignored config carried in via `.worktreeinclude`, slot locking while the agent runs, and a sweep afterwards. **No port allocation, no submodule worktrees, no base branch other than the repository default.** |
-| `toolkit` *(default when available)* | `pipeline` present **at or above the minimum version that ships `worktree`** | Everything `native` provides, plus the three things it cannot: a port block, per-submodule worktrees, and a slot cut from an arbitrary base branch. Also `ci-wait`, `submodule bump` and `gc`. |
+| `toolkit` *(default when available)* | `pipeline` present **at or above the minimum version that reports a hook-provisioned slot's submodule directories** | Everything `native` provides, plus the three things it cannot: a port block, per-submodule worktrees, and a slot cut from an arbitrary base branch. Also `ci-wait`, `submodule bump` and `gc`. |
 | `pipeline` | explicit `--engine=pipeline --pipeline=<name>` | Each task becomes one `pipeline drive` run; the pipeline owns the whole implement → review → PR → CI → merge → sync lifecycle |
 
 ### 1.1 The resolution rule for `auto`
@@ -42,11 +42,13 @@ sentence so this file reads standalone.
 pipeline --version        →  bare semver on one line, e.g. 0.15.0
 ```
 
-- **At or above the minimum version that ships `pipeline worktree` ⇒ `toolkit`.**
+- **At or above the minimum version that reports a hook-provisioned slot's
+  submodule directories ⇒ `toolkit`.**
 - **Below it, or `pipeline` absent, or the check failed ⇒ `native`,** and the run
-  states the reason once: *"pipeline X.Y.Z is below the minimum M.N.P that ships
-  `worktree` — running in the `native` tier; tasks needing a port, a submodule
-  worktree, or a non-default base branch will be withheld."*
+  states the reason once: *"pipeline X.Y.Z is below the minimum M.N.P that
+  reports a hook-provisioned slot's submodule directories — running in the
+  `native` tier; tasks needing a port, a submodule worktree, or a non-default
+  base branch will be withheld."*
 
 **Presence alone is explicitly insufficient, and this is not a stylistic
 preference.** A CLI has been on PATH throughout this design that has no
