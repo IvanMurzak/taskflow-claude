@@ -93,9 +93,12 @@ the end instead of dying partway.
 | `gh auth status` | whether a PR path exists at all |
 
 The branch glob is `worktree-*` — the namespace the substrate actually produces
-and the one `pipeline gc` reaps. This system has **no other branch namespace**;
-do not create branches under a different prefix and do not look for them under
-one.
+and the one `pipeline gc` reaps. This system has **no other branch namespace
+that this skill creates**; do not create branches under a different prefix and
+do not look for them under one. The raw glob is broader than that, though: it
+also catches the host's own `worktree-agent-*` isolation branches, which this
+skill neither creates nor is entitled to reap — see §12 for how the two are
+told apart.
 
 ### 2.2 Reading the block — first, did it fire?
 
@@ -634,7 +637,28 @@ Assert these; do not assume them.
 
 A round is not atomic and a session can end mid-flight. Before any new dispatch,
 reconcile `git worktree list` (live slots), `git branch --list worktree-*`
-(dispatched branches) and the board's own `🔵` rows:
+(candidate dispatched branches) and the board's own `🔵` rows.
+
+**`worktree-*` matches two namespaces, and only one of them is this skill's.**
+`worktree-<task-id>` is cut per task, by a worker following its brief; its
+suffix is a task id, and a task id either resolves to a row on the board or it
+does not. `worktree-agent-<hash>` is cut by the host's own worker-isolation
+placement (§8, `native`) for **agent isolation** — a different owner (the host,
+not this skill) and a different lifetime: it is provisioned for one agent's run
+and **survives the agent**, where `worktree-<task-id>` is provisioned for one
+task and is reaped with its slot. Both match the glob; only the first is
+evidence of a dispatch by this run.
+
+**Read the rule as a derivation, not as a deny-list of one prefix.** A dispatch
+is a row plus its slot, so judge every `worktree-*` branch by whether its suffix
+resolves to a task id carrying a row on the board. One that does is this run's —
+dispatched, or a resume candidate. One that does not — `worktree-agent-*` is the
+observed case, and nothing here rules out some other namespace turning up later
+— is **not this run's**, full stop, and is read the same way as any branch
+belonging to another session: not this round's reconciliation evidence, and
+never an orphan of this run's to reap. §13's never-list ("never delete a branch
+that is not this run's own `worktree-*` slot") already forbids that deletion;
+this section creates no exception to it, for `--merge` or for cleanup.
 
 | Evidence | Action |
 |---|---|
@@ -642,8 +666,15 @@ reconcile `git worktree list` (live slots), `git branch --list worktree-*`
 | A `🔵` row with an open PR | **Adopt it.** Do not dispatch a second worker — that is the duplicate dispatch invariant 3 exists to prevent |
 | A `🔵` row with a branch but no PR | Inspect the worktree; resume against the existing branch, or reset the row to pending and reap the slot. Decide from the tree, not from the row |
 | A live slot with no matching row | A leak. `pipeline gc` reports it, `pipeline gc --clean` reaps it. A `⛔` row's slot is not a leak |
+| A `worktree-*` branch whose suffix matches no row | **Not this run's** — leave it. This is the expected shape of a `worktree-agent-*` isolation branch, or of another session's task branch; it is neither reconciliation evidence here nor a leak to reap |
 
 The board records what was *dispatched*; the tree records what *happened*.
+
+**The glob is weaker evidence than the slot registry.** `pipeline worktree list`
+names only the slots this run provisioned — it never reads a git branch name, so
+a `worktree-agent-*` branch cannot appear in it at all. `git branch --list
+worktree-*` has no such filter; it reports every literal match, host isolation
+branches included. **Where the two disagree, the registry wins.**
 
 ---
 

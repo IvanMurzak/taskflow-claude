@@ -306,9 +306,12 @@ the substrate, because the substrate is also the bookkeeping.
 | **Location** | `native`: `.claude/worktrees/`, host-managed. `toolkit`: the substrate's own root, outside the repository | A worker's build artifacts never land in the project folder |
 
 **The skill invents no branch namespace of its own.** `worktree-<name>` is the
-substrate's, and it is the only one that appears anywhere in this system — in the
-preflight snapshot, in reconciliation (§11), and in `gc`'s reaping (§12). Do not
-create branches under any other prefix and do not look for them under one.
+substrate's, and it is the only one *this skill* deliberately creates or looks
+for — in the preflight snapshot, in reconciliation (§11), and in `gc`'s reaping
+(§12). Do not create branches under any other prefix and do not look for them
+under one. The raw `worktree-*` glob is not this exclusive, though: it also
+catches the host's own `worktree-agent-*` isolation branches (§11), which this
+skill neither creates nor is entitled to reap.
 
 The CLI additionally enforces its own name rules, which a validated task id
 already satisfies: it must match `[A-Za-z0-9][A-Za-z0-9._-]*`, be at most 64
@@ -813,11 +816,28 @@ computed:
 
 ```
 git worktree list                    # live slots
-git branch --list worktree-*         # dispatched branches
+git branch --list worktree-*         # candidate dispatched branches
 ```
 
-plus the board's own `🔵` rows. **Reconcile all of it before any new dispatch.**
-Four cases:
+plus the board's own `🔵` rows.
+
+**`worktree-*` matches two namespaces that share nothing but the prefix.**
+`worktree-<task-id>` is cut per task (§4), and its suffix is a task id — one
+that either carries a row on the board or does not. `worktree-agent-<hash>` is
+cut by the host's own worker-isolation placement (§3.1) for **agent
+isolation**: a different owner than this skill, a different lifetime than a
+task slot, and it survives the agent that produced it. Both match the glob.
+Only a branch whose suffix resolves to a task id with a board row is evidence
+of a dispatch by *this run* — the durable rule is that a dispatch is a row plus
+its slot, and any `worktree-*` branch without a matching row belongs to
+somebody else's session, `worktree-agent-*` being the observed case and not the
+only one the rule has to cover. Such a branch is read the same way a foreign
+session's branch always is: not reconciliation evidence, and never an orphan of
+this run's to reap — §9.3's rule ("never deletes a branch that is not its own
+`worktree-*` slot") already covers it, and cleanup below (§12) creates no
+exception to it.
+
+**Reconcile all of it before any new dispatch.** Five cases:
 
 | Evidence | Action |
 |---|---|
@@ -825,10 +845,18 @@ Four cases:
 | **2. A `🔵` row with an open PR** | **Adopt it.** Do not dispatch a second worker for that task — that is the duplicate dispatch §5 exists to prevent. Pick the row up at review or merge, wherever it actually is |
 | **3. A `🔵` row with a branch but no PR** | **Run §12's reaping precondition before you form an opinion** — every repository the slot spans, branch commits *and* working-tree status, in that order. Where it finds work: resume the worker against the existing branch. Only where **every** repository the slot spans is both commitless and clean may the row reset to pending and the slot be reaped. Decide from the tree, not from the row — and the branch and the submodule slot are both part of the tree |
 | **4. A live slot with no matching row** | A leak. `pipeline gc` reports it; `pipeline gc --clean` reaps it. A `⛔` row keeps its slot deliberately — that is not a leak, and reaping it destroys the post-mortem |
+| **5. A `worktree-*` branch whose suffix matches no row** | **Not this run's.** Leave it — this is the ordinary shape of a `worktree-agent-*` isolation branch or of another session's task branch, not a leak and not something this reconciliation acts on |
 
 Reconciliation is the reason the in-flight table (§5) is rebuilt from repository
 evidence at the start of every invocation rather than trusted from the board
 alone. The board records what was *dispatched*; the tree records what *happened*.
+
+**The glob is weaker evidence than the slot registry.** `pipeline worktree list`
+(§3.2) names only the slots this run provisioned through `pipeline worktree
+create` — it has no way to report a branch it did not cut, host isolation
+branches included. `git branch --list worktree-*` has no such filter and reports
+every literal match. Where the two disagree about whether a branch is this
+run's, **the registry wins.**
 
 ---
 
@@ -841,6 +869,18 @@ Every destructive step in this section reaps a directory *and a branch*: §12.2'
 row and reap the slot" decision reached through §11. Each of them is preceded by
 the same three checks, **in this order** — **the branch is checked, in every
 repository the slot spans, before any directory is reaped.**
+
+**And every one of them reaps only a branch this run's own board already
+accounts for.** §11's row-derivation — a `worktree-*` branch whose suffix
+resolves to a task id with a board row — is what proves a branch is this run's
+to reap, not the raw glob by itself. `pipeline gc [--clean]` and
+`--force-worktree-branches` (§12.4) act on whatever locally matches
+`worktree-*`; a literal match is not, on its own, a licence to delete — a
+`worktree-agent-*` host-isolation branch or another session's
+`worktree-<other-task-id>` branch matches the same pattern and belongs to
+neither this run nor this task. The rule §9.3 states for `on-green` ("never
+deletes a branch that is not its own `worktree-*` slot") applies here exactly
+the same way; this section adds no cleanup-specific exception to it.
 
 **1. A submodule task's work is not in the parent slot, and never was.** A task
 whose `repo:` frontmatter names a submodule works in the **submodule** slot, on
@@ -1006,7 +1046,12 @@ the deliverable; a `gc` whose output nobody reads has collected nothing.
   **unmerged** `worktree-*` branches — squash-merged branches read as unmerged
   forever, which is the case it exists for. It destroys unmerged work by
   definition, so it is **never run unattended**: it requires an explicit owner
-  decision.
+  decision. The owner making that decision needs to know it works from the same
+  literal `worktree-*` match §12's reaping precondition warns about: nothing in
+  the flag distinguishes this run's own unmerged task branches from a
+  `worktree-agent-*` host-isolation branch or another session's unmerged task
+  branch. Confirm against the board (§11) before naming what it will touch, not
+  after.
 
 Finish by reporting verified results, withheld tasks and why (§2.1), preserved
 worktrees and why (§12.3), any bump that reported `merged_via_admin: true` —
