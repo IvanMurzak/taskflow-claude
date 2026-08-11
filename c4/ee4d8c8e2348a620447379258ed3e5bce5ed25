@@ -1,0 +1,23 @@
+README.md
+  s_a4dd6028495d59::t_949e6b9dc7d398 66,68-70,74-75,77-82,85,88,93,104,114,127,133
+docs/taskflow-claude.svg
+  s_a4dd6028495d59::t_816f8d59505a6c 1
+docs/taskflow-steps.svg
+  s_a4dd6028495d59::t_16a71fd1b6dfc6 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c4ee4d8c8e2348a620447379258ed3e5bce5ed25",
+  "prompts": {},
+  "sessions": {
+    "s_a4dd6028495d59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_a4dd6028495d59",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
