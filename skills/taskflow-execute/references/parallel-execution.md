@@ -485,7 +485,7 @@ Three things the host does not do for you:
 checkout **stops the run** before any dispatch. Report the dirty paths. **Do not
 stash and do not clean** — the dirt may belong to another agent working in the
 same shared checkout, which is exactly what was found in this workspace at
-framing time. (`--dry-run` skips this gate deliberately, so it can answer "what
+planning time. (`--dry-run` skips this gate deliberately, so it can answer "what
 would happen" in a tree that is not ready to run.)
 
 **Per-repo slots.** A task whose `repo:` is a submodule works in that submodule's

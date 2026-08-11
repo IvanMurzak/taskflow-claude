@@ -1,7 +1,7 @@
 {
   "name": "taskflow",
-  "version": "0.6.0",
-  "description": "A four-skill Taskflow lifecycle for framing architecture from repository evidence, adversarial review, immutable task specifications, and ROADMAP-driven execution.",
+  "version": "0.7.0",
+  "description": "A four-skill Taskflow lifecycle for planning architecture from repository evidence, adversarial review, immutable task specifications, and ROADMAP-driven execution.",
   "author": {
     "name": "IvanMurzak"
   },

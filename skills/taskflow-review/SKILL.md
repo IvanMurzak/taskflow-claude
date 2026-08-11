@@ -12,7 +12,7 @@ argument-hint: "[<taskflow slug> — default: the single YYYY-MM-DD-<slug> folde
 - Honor a supplied slug. If the root has exactly one sub-folder, use it;
   otherwise ask the owner to select one. Confirm the resolved folder before work.
 - Read the whole folder—README, ROADMAP, numbered documents, and `tasks/` if it
-  exists. Never use legacy workflow artifacts as input or fallback.
+  exists.
 
 ## Principle
 

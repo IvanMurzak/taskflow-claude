@@ -10,11 +10,11 @@ argument-hint: "[<taskflow slug> — default: the single YYYY-MM-DD-<slug> folde
 
 - Default root: `.taskflow/`; work in one `YYYY-MM-DD-<slug>/` folder.
 - Honor a supplied slug; use the only sub-folder when unambiguous,
-  otherwise ask the owner. Do not inspect or migrate legacy workflow artifacts.
+  otherwise ask the owner.
 
 ## Precondition
 
-The frame is locked, reviewed, and has no unresolved product question or
+The plan is locked, reviewed, and has no unresolved product question or
 unapplied finding. Stop and surface either condition rather than guess.
 
 ## Outputs
