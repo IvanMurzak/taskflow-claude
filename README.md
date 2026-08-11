@@ -1,10 +1,9 @@
 # Taskflow Skills - Claude
 
-[![Release](https://img.shields.io/github/v/release/IvanMurzak/taskflow-claude?style=flat-square&color=0d1117&label=release)](https://github.com/IvanMurzak/taskflow-claude/releases)
-[![License](https://img.shields.io/badge/license-MIT-0d1117?style=flat-square)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-0d1117?style=flat-square)](https://claude.com/claude-code)
-[![Skills](https://img.shields.io/badge/skills-4-0d1117?style=flat-square)](#the-four-skills)
-[![Stars](https://img.shields.io/github/stars/IvanMurzak/taskflow-claude?style=flat-square&color=0d1117)](https://github.com/IvanMurzak/taskflow-claude/stargazers)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-plugin-D97757?style=for-the-badge&logo=anthropic&logoColor=white&labelColor=0D1117)](https://claude.com/claude-code)
+[![Release](https://img.shields.io/github/v/release/IvanMurzak/taskflow-claude?style=for-the-badge&logo=github&logoColor=white&label=release&labelColor=0D1117&color=3FB950)](https://github.com/IvanMurzak/taskflow-claude/releases)
+[![Skills](https://img.shields.io/badge/skills-4-A855F7?style=for-the-badge&labelColor=0D1117)](#the-four-skills)
+[![License](https://img.shields.io/badge/license-MIT-6E7681?style=for-the-badge&labelColor=0D1117)](LICENSE)
 
 ![Taskflow — plan, review, tasks, execute](https://raw.githubusercontent.com/IvanMurzak/taskflow-claude/main/docs/taskflow-claude.svg)
 
@@ -32,6 +31,31 @@ Already inside Claude Code? Type the same two, as slash commands:
 
 That's it — no config file, no API key, no account. Restart Claude Code and the
 four commands are there.
+
+> The marketplace is called `pipeline-claude` because one marketplace carries
+> both of my Claude Code plugins. The plugin you just installed is `taskflow`.
+
+### Optional — raise the ceiling
+
+Taskflow already gives every task its own git worktree, and already runs several
+at once, with nothing else installed. These two are opt-in:
+
+```bash
+bun add -g @baizor/pipeline                     # the Pipeline CLI, 0.17.0 or above
+claude plugin install pipeline@pipeline-claude  # the Pipeline plugin
+```
+
+**The CLI** is what `--engine=auto` looks for on your `PATH`. At 0.17.0 or above
+it lifts the execution tier from `native` to `toolkit`, which adds the three
+things host worker isolation structurally cannot give a task: a bound **port**, a
+**worktree per submodule**, and a **base branch other than the repository
+default**. Without it, only tasks needing those three stay pending — every other
+task still dispatches at full concurrency. It is the *global* install that counts
+here: the Pipeline plugin bundles its own copy for `/pipeline:*`, but Taskflow
+resolves `pipeline` from `PATH`.
+
+**The plugin** adds the `/pipeline:*` skills for authoring pipelines — which is
+what `--engine=pipeline --pipeline=<name>` then hands each task to.
 
 ## The four steps
 
