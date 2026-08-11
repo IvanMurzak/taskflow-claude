@@ -19,21 +19,22 @@ Four commands, in order. That is the whole thing.
 
 ```bash
 claude plugin marketplace add IvanMurzak/pipeline-claude-marketplace
-claude plugin install taskflow@pipeline-claude
+claude plugin install taskflow@pipeline
 ```
 
 Already inside Claude Code? Type the same two, as slash commands:
 
 ```text
 /plugin marketplace add IvanMurzak/pipeline-claude-marketplace
-/plugin install taskflow@pipeline-claude
+/plugin install taskflow@pipeline
 ```
 
 That's it — no config file, no API key, no account. Restart Claude Code and the
 four commands are there.
 
-> The marketplace is called `pipeline-claude` because one marketplace carries
-> both of my Claude Code plugins. The plugin you just installed is `taskflow`.
+> One marketplace carries both of my Claude Code plugins, and its id is
+> `pipeline` — hence the `@pipeline` suffix. The plugin you just installed is
+> `taskflow`; `pipeline` is the other one.
 
 <details>
 <summary><b>Optional — add Pipeline to raise the execution ceiling</b></summary>
@@ -45,7 +46,7 @@ at once, with nothing else installed. These two are opt-in:
 
 ```bash
 bun add -g @baizor/pipeline                     # the Pipeline CLI, 0.17.0 or above
-claude plugin install pipeline@pipeline-claude  # the Pipeline plugin
+claude plugin install pipeline@pipeline         # the Pipeline plugin
 ```
 
 **The CLI** is what `--engine=auto` looks for on your `PATH`. At 0.17.0 or above
