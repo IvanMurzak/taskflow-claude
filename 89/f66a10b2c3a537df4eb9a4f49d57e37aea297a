@@ -1,0 +1,43 @@
+skills/taskflow-execute/SKILL.md
+  s_f5e65a594ec2d4::t_9d17ddb6c39339 261-262,359
+skills/taskflow-review/SKILL.md
+  s_f5e65a594ec2d4::t_18368823064f5f 15
+.claude-plugin/plugin.json
+  s_de4fb54b82f344::t_0c1d9895590070 3-4
+LICENSE
+  s_de4fb54b82f344::t_c19ce8a67235b3 1-21
+README.md
+  s_de4fb54b82f344::t_79baea4a145397 1,3-87,90,93-113,115-121,123,125-152,154,156-159,161-173,178,182-183,185,187,189-191,193-194,196,204,209-210,217-218,221-222,224-228,233-235,240,246-247,254-268,270-272,276
+docs/taskflow-claude.svg
+  s_de4fb54b82f344::t_933e0624b8e84c 1
+skills/taskflow-execute/references/parallel-execution.md
+  s_de4fb54b82f344::t_ea62672a47f7ea 488
+skills/taskflow-plan/SKILL.md
+  s_de4fb54b82f344::t_3553307dc59b21 2-4,7
+skills/taskflow-tasks/SKILL.md
+  s_de4fb54b82f344::t_9a4c76957546bb 13,17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "89f66a10b2c3a537df4eb9a4f49d57e37aea297a",
+  "prompts": {},
+  "sessions": {
+    "s_de4fb54b82f344": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_de4fb54b82f344",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    },
+    "s_f5e65a594ec2d4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc66c-df58-72e0-a9df-8a2531918de0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
