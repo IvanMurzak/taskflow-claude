@@ -1,0 +1,19 @@
+docs/taskflow-claude.svg
+  s_14c2d758055b35::t_1c1cf41db47c43 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "654b8b90dab73449028e722978345c3e6f3bdc21",
+  "prompts": {},
+  "sessions": {
+    "s_14c2d758055b35": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_14c2d758055b35",
+        "model": "unknown"
+      },
+      "human_author": "Ivan Murzak <Ivan.D.Murzak@gmail.com>"
+    }
+  }
+}
