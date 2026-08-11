@@ -35,7 +35,10 @@ four commands are there.
 > The marketplace is called `pipeline-claude` because one marketplace carries
 > both of my Claude Code plugins. The plugin you just installed is `taskflow`.
 
-### Optional — raise the ceiling
+<details>
+<summary><b>Optional — add Pipeline to raise the execution ceiling</b></summary>
+
+<br>
 
 Taskflow already gives every task its own git worktree, and already runs several
 at once, with nothing else installed. These two are opt-in:
@@ -56,6 +59,8 @@ resolves `pipeline` from `PATH`.
 
 **The plugin** adds the `/pipeline:*` skills for authoring pipelines — which is
 what `--engine=pipeline --pipeline=<name>` then hands each task to.
+
+</details>
 
 ## The four steps
 
