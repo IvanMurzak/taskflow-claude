@@ -1121,6 +1121,28 @@ pipeline worktree destroy  --name <task-id> --outcome completed [--json]
   `gh pr merge --delete-branch` only ever reaches the *remote* copy. Nothing in
   this subsection reaps that local branch; §12.4's `pipeline gc [--clean]` at run
   completion is the step that does (F-12).
+- **Release the host's lock on every slot this run dispatched — whether or not
+  the directory is reaped.** The host locks a `native` slot for the agent's
+  lifetime with a reason naming a pid, observed as
+  `claude agent agent-<id> (pid <n>)`, and clears it in the sweep. **When a
+  session ends before its sweep runs — killed, crashed, or simply closed
+  mid-round — the lock outlives the run, the agent, and eventually the process it
+  names.** That leftover is what the *next* run trips over, and §10.1's first two
+  questions cannot separate it from a live worker's slot: the pid it names is the
+  **orchestrator's own `claude` process**, not the agent's, so "that pid is
+  alive" stays true for as long as any session is running, and once the pid is
+  recycled by an unrelated process the signal is worse than useless. Nothing else
+  in this runbook clears it. So once a task reaches a terminal state and the
+  reaping precondition at the head of §12 is satisfied, run
+  `git worktree unlock <path>` for that slot **before** anything else in this
+  subsection. It is the one teardown step that is unconditionally safe: it
+  deletes no directory, no branch and no commit — it withdraws a claim this run
+  made and is no longer entitled to hold. An unlocked leftover is then read
+  honestly by the ordinary checks (`prune` reports it; `remove` refuses it while
+  it still holds modified or untracked files, per §10.1); a locked one is not.
+  **A run that ends without releasing its locks has published a false claim about
+  the tree**, and the party that pays for it is the next run, which cannot tell
+  the claim was abandoned.
 - **A removal that fails is not final.** The most common cause on Windows is a
   file lock held at the moment of removal — `destroy` (or the host's sweep)
   reports the failure and the round continues, correctly; forcing it inline is
@@ -1143,6 +1165,14 @@ Where a slot must be explicitly preserved through the CLI, that is
 inversion to remember is the failed *create* in §10: a slot with nothing in it is
 reaped with `completed`, because there is nothing to preserve.
 
+**Unlock it anyway.** Preserving a failed task's worktree means preserving the
+*directory* — not this run's claim on it. Release the host lock exactly as §12.2
+says and change nothing else: the directory, the branch and every uncommitted
+byte stay where they are for the post-mortem, while the next run stops reading
+the slot as a live worker. **A `⛔` row that keeps a locked slot is how a
+preserved post-mortem becomes the next run's phantom** — the row is doing its job
+and the lock is quietly undoing it.
+
 `pipeline worktree list [--json]` enumerates the slots this command group
 provisioned and whether each is still on disk — use it to build the "what was
 preserved and why" section of the report.
@@ -1150,7 +1180,9 @@ preserved and why" section of the report.
 ### 12.4 At run completion
 
 When every scoped row is verified complete: update the taskflow README status and
-the ROADMAP counter, remove any thin pointer created for this run, then
+the ROADMAP counter, remove any thin pointer created for this run, **release any
+host lock this run still holds** (§12.2 — every slot it dispatched, including the
+`⛔` rows whose directories are being kept), then
 
 ```
 pipeline gc [--project <path>] [--json] [--no-submodules]

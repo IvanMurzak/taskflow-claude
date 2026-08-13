@@ -680,9 +680,27 @@ branches included. **Where the two disagree, the registry wins.**
 ## 13. Finish, and what never to do
 
 When every scoped row is verified complete: update the taskflow README status
-and the ROADMAP counter, remove any thin pointer created for this run, commit,
-and report verified results, withheld tasks and why, preserved worktrees and
-why, and every outstanding gate.
+and the ROADMAP counter, remove any thin pointer created for this run, release
+every host worktree lock this run is still holding, commit, and report verified
+results, withheld tasks and why, preserved worktrees and why, and every
+outstanding gate.
+
+**Releasing those locks is not conditional on the run finishing well.** A run
+ends when it stops — completed, halted, drained by `--on-fail=stop`, or
+interrupted — and a lock this run took is this run's to release on every one of
+those paths. The host clears it in a sweep that a session ending mid-round never
+reaches, the lock reason names the **orchestrator's** `claude` pid rather than
+the agent's, and nothing else ever clears it; so a leftover claim reads as a
+live worker to the next invocation for as long as any session is running, and
+reads as an unattributable one afterwards.
+
+The release is `git worktree unlock <path>`, per slot, and it is stated here
+rather than only in the reference module because **a `--parallel=1` run never
+loads that module** and is no less capable of leaving a lock behind. It deletes
+no directory, no branch and no commit, so it applies to a preserved `⛔` slot
+exactly as it applies to a merged one — and it is never a licence to remove
+what the lock was holding. `references/parallel-execution.md` §12.2 owns the
+precondition and the reaping rules that follow it.
 
 Never: mark work complete from a worker's report, run two tasks from the same
 group concurrently, edit a task specification, implement inline yourself, leave
