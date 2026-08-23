@@ -152,7 +152,7 @@ half-finished run can never lie to you about where it got to.
 - [The four skills](#the-four-skills)
 - [`/taskflow-execute` flags](#taskflow-execute-flags)
 - [Execution tiers](#execution-tiers)
-- [Why `--merge` defaults to `ask`](#why---merge-defaults-to-ask)
+- [Why `--merge` defaults to `on-green`](#why---merge-defaults-to-on-green)
 - [Workflow contract](#workflow-contract)
 - [What ships in this repository](#what-ships-in-this-repository)
 - [License](#license)
@@ -217,7 +217,7 @@ disagree.
 | `--engine=` | `auto` · `native` · `toolkit` · `pipeline` | `auto` | picks the execution tier — see below |
 | `--pipeline=` | a pipeline name | — | only valid together with `--engine=pipeline` |
 | `--review=` | `off` · `low` · `medium` · `high` · `xhigh` | `off` | anything but `off` dispatches a reviewer that is never the implementer |
-| `--merge=` | `ask` · `on-green` · `never` | `ask` | `native`/`toolkit` only — see below |
+| `--merge=` | `ask` · `on-green` · `never` | `on-green` | `native`/`toolkit` only — see below |
 | `--submodules=` | `auto` · `off` | `auto` | `auto` means "run the sync only when `git submodule status` is non-empty" |
 | `--solo=` | comma-separated id list | empty | forces single-slot dispatch for a task that needs an exclusive resource |
 | `--on-fail=` | `continue` · `stop` | `continue` | `stop` drains the in-flight slots and halts the run |
@@ -264,19 +264,12 @@ every subagent it spawns. That boundary is partial rather than absolute — see
 `agents/taskflow-implementer.md` for the measured enforcement matrix before
 relying on it for anything you have not verified yourself.
 
-## Why `--merge` defaults to `ask`
+## Why `--merge` defaults to `on-green`
 
-`--merge=ask` holds each finished task at "verified, merge held" and waits for
-you — nothing merges unattended. That is the default because an orchestrator that
-merges pull requests by itself, by default, is a large blast radius for a plugin
-anyone can install.
-
-`--merge=on-green` (merge once CI is green, no blocking review finding is open,
-and the row is behind no approval gate) and `--merge=never` (stop at "verified,
-merge held" permanently, and never ask) both exist for when you want something
-else — but they are opt-in, and neither bypasses branch protection nor elevates
-under any circumstance. `--merge` applies to the `native` and `toolkit` tiers
-only; the `pipeline` tier merges by its own run definition instead.
+`on-green` merges only after DoD verification, required review, required CI,
+and owner gates pass. It never bypasses branch protection. Use `ask` to hold for
+manual approval or `never` to leave verified PRs open. The `pipeline` tier owns
+its own merge policy.
 
 ## Workflow contract
 
