@@ -36,3 +36,12 @@ locked, or unmerged work.
 `on-green` merges only when DoD, required review, and required CI are green.
 `ask` and `never` leave the row `🟣`. Workers and reviewers never merge. Never
 bypass protection.
+
+## Integration branch
+
+With `--integration-branch`, create or adopt the ref in each repository on the
+board before dispatch, cut each task worktree from it, and verify the worktree
+is actually on it before the worker starts. `isolation: worktree` places the
+worker itself; it does not guarantee the base you asked for reached a submodule
+or a reused worktree, so check rather than assume. Task PRs target the
+integration ref; one final PR merges it into `base_branch`.
